@@ -15,7 +15,12 @@ import urllib.parse
 from dotenv import load_dotenv
 
 from backend.services.detector import DroneDetector
+from pydantic import BaseModel
+from typing import Optional, Dict, Any
 
+from backend.services.flood_risk import predict_flood_risk
+from backend.services.sos_extractor import extract_sos_llm
+from backend.services.priority import calculate_priority
 
 # ============================================================
 # LOAD ENVIRONMENT VARIABLES
@@ -54,7 +59,26 @@ app = FastAPI(
     ),
     version="2.1.0"
 )
+# ============================================================
+# FEATURE 1 / 3 / 4 REQUEST MODELS
+# ============================================================
 
+class FloodRiskRequest(BaseModel):
+    water_level_cm: float
+    water_level_rate_cm_per_min: float
+    rainfall_mm_per_hr: float
+    soil_moisture_pct: float
+    elevation_m: float
+
+
+class SOSRequest(BaseModel):
+    message: str
+
+
+class PriorityRequest(BaseModel):
+    sos_data: Dict[str, Any]
+    feature2_people_count: Optional[int] = None
+    flood_severity: float = 0.0
 
 # ============================================================
 # CORS
@@ -216,7 +240,102 @@ async def predict(file: UploadFile = File(...)):
         content=body,
         media_type=f"multipart/mixed; boundary={boundary}"
     )
+# ============================================================
+# FEATURE 1 — FLOOD RISK
+# ============================================================
 
+@app.post("/flood-risk")
+async def flood_risk(request: FloodRiskRequest):
+
+    try:
+
+        result = predict_flood_risk(
+            water_level_cm=request.water_level_cm,
+            water_level_rate_cm_per_min=(
+                request.water_level_rate_cm_per_min
+            ),
+            rainfall_mm_per_hr=request.rainfall_mm_per_hr,
+            soil_moisture_pct=request.soil_moisture_pct,
+            elevation_m=request.elevation_m
+        )
+
+        risk_to_severity = {
+            "LOW": 0.25,
+            "MEDIUM": 0.50,
+            "HIGH": 0.75,
+            "CRITICAL": 1.00
+        }
+
+        result["flood_severity"] = risk_to_severity.get(
+            result["risk_label"],
+            0.0
+        )
+
+        return result
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Flood risk prediction failed: {str(e)}"
+        )
+    
+    # ============================================================
+# FEATURE 3 — SOS INTELLIGENCE
+# ============================================================
+
+@app.post("/sos")
+async def analyze_sos(request: SOSRequest):
+
+    try:
+
+        result = extract_sos_llm(
+            request.message
+        )
+
+        return result
+
+    except ValueError as e:
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"SOS analysis failed: {str(e)}"
+        )
+    
+    # ============================================================
+# FEATURE 4 — MULTI-MODAL PRIORITY
+# ============================================================
+
+@app.post("/priority")
+async def calculate_emergency_priority(
+    request: PriorityRequest
+):
+
+    try:
+
+        result = calculate_priority(
+            sos_data=request.sos_data,
+            feature2_people_count=(
+                request.feature2_people_count
+            ),
+            flood_severity=request.flood_severity
+        )
+
+        return result
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Priority calculation failed: {str(e)}"
+        )
 
 # ============================================================
 # DISTANCE HELPER
