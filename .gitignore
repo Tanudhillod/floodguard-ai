@@ -1,4 +1,4 @@
-# v0 sandbox internal files
+﻿# v0 sandbox internal files
 __v0_runtime_loader.js
 __v0_devtools.tsx
 __v0_jsx-dev-runtime.ts
@@ -6,14 +6,20 @@ __v0_jsx-dev-runtime.ts
 .v0-trash/
 .vercel/
 
-# Environment variables
-.env*.local
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
 
-# Common ignores
-node_modules
+# Dependencies and build files
+node_modules/
 .next/
-.DS_Store.venv/
+.venv/
 __pycache__/
 *.pyc
 
-.venv/
+# OS files
+.DS_Store
+
+# Swytchcode local files
+.swytchcode/workspace.json

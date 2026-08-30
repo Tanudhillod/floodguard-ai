@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { droneAnalysis } from "@/lib/mock-data"
 import {
   Icon,
   Panel,
@@ -23,7 +22,8 @@ type DetectionHistory = {
   droneId: string
   filename: string
   peopleCount: number
-  confidence: number
+  averageConfidence: number
+  highestConfidence: number
   timestamp: string
   status: "Completed"
 }
@@ -254,6 +254,10 @@ export default function DronePage() {
             )
           : 0
 
+      const highestConfidence = metadata.detections.length > 0
+        ? Math.round(Math.max(...metadata.detections.map((detection) => detection.confidence)) * 100)
+        : 0
+
       // ========================================================
       // SAVE TO DETECTION HISTORY
       // ========================================================
@@ -273,8 +277,10 @@ export default function DronePage() {
         peopleCount:
           metadata.people_count,
 
-        confidence:
+        averageConfidence:
           averageConfidence,
+
+        highestConfidence,
 
         timestamp:
           new Date().toISOString(),
@@ -421,6 +427,10 @@ export default function DronePage() {
         )
       : 0
 
+  const highestDetectionConfidence = detections.length > 0
+    ? Math.round(Math.max(...detections.map((detection) => detection.confidence)) * 100)
+    : 0
+
   // ============================================================
   // FORMAT DATE
   // ============================================================
@@ -455,26 +465,26 @@ export default function DronePage() {
 
         <Panel className="flex min-h-[360px] flex-col items-center justify-center p-6 text-center">
 
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-sky-500/25 bg-sky-500/10 text-sky-200">
+          <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-[#2563eb]">
             <Icon
               name="ScanLine"
               size={32}
             />
           </div>
 
-          <h3 className="mt-5 text-2xl font-semibold text-white">
+          <h3 className="mt-5 text-2xl font-semibold text-[#0f2742]">
             Upload drone image
           </h3>
 
-          <p className="mt-2 max-w-md text-sm text-slate-300">
-            Upload a drone image to detect people using the FloodGuard AI model.
+          <p className="mt-2 max-w-md text-sm text-[#486581]">
+            Upload a drone image to run person detection for an active mission.
           </p>
 
           {/* DRONE ID */}
 
           <div className="mt-4 w-full max-w-sm text-left">
 
-            <label className="mb-2 block text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
+            <label className="mb-2 block text-xs font-medium uppercase tracking-[0.14em] text-[#627D98]">
               Drone ID
             </label>
 
@@ -487,16 +497,16 @@ export default function DronePage() {
                 )
               }
               placeholder="Example: DG-001"
-              className="w-full rounded-xl border border-slate-700 bg-slate-950/70 px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-sky-500"
+              className="w-full rounded-md border border-slate-200 bg-white px-4 py-2.5 text-sm text-[#0f2742] outline-none transition placeholder:text-slate-400 focus:border-[#2563eb]"
             />
 
           </div>
 
           <div className="mt-4 flex w-full max-w-sm flex-col items-stretch gap-3 sm:flex-row">
 
-            <label className="inline-flex flex-1 cursor-pointer items-center justify-center rounded-xl bg-sky-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-sky-400">
+            <label className="inline-flex flex-1 cursor-pointer items-center justify-center rounded-md bg-[#2563EB] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1D4ED8]">
 
-              Select image
+              Upload Image
 
               <input
                 type="file"
@@ -511,9 +521,9 @@ export default function DronePage() {
 
             <button
               type="button"
-              className="rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-sm font-medium text-slate-200"
+              className="rounded-md border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-[#0f2742]"
             >
-              Drone mission
+              Mission Details
             </button>
 
           </div>
@@ -527,16 +537,11 @@ export default function DronePage() {
               isAnalyzing ||
               !selectedFile
             }
-            className="mt-5 inline-flex items-center gap-2 rounded-xl border border-sky-500/40 bg-sky-500/10 px-4 py-2.5 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/15 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-5 inline-flex items-center gap-2 rounded-md bg-[#2563eb] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-50"
           >
 
-            <Icon
-              name="Sparkles"
-              size={16}
-            />
-
             {isAnalyzing
-              ? "Analyzing..."
+              ? "Running analysis..."
               : "Analyze Image"}
 
           </button>
@@ -555,8 +560,8 @@ export default function DronePage() {
         <Panel className="p-5">
 
           <SectionHeader
-            eyebrow="Latest analysis"
-            title="Detection summary"
+            eyebrow="Latest result"
+            title="Detection result"
             action={
               <StatusBadge
                 label={
@@ -578,7 +583,7 @@ export default function DronePage() {
             icon="Radar"
           />
 
-          <div className="relative mt-3 h-[260px] overflow-hidden rounded-2xl border border-slate-700 bg-[linear-gradient(135deg,#0b1d2b,#0c2431_40%,#071622)]">
+          <div className="relative mt-3 h-[260px] overflow-hidden rounded-lg border border-[#173B5E] bg-[#0B1F33]">
 
             {resultImage ? (
 
@@ -611,60 +616,60 @@ export default function DronePage() {
 
           <div className="mt-5 grid gap-3 sm:grid-cols-4">
 
-            <div className="rounded-xl border border-slate-700 bg-slate-950/60 p-3 text-center">
+            <div className="rounded-md border border-[#D6E2EE] bg-white p-3 text-center">
 
-              <div className="text-2xl font-bold text-white">
+              <div className="text-2xl font-bold text-[#0f2742]">
                 {peopleCount ?? 0}
               </div>
 
-              <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-400">
+              <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-[#627D98]">
                 People detected
               </div>
 
             </div>
 
 
-            <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-center">
+            <div className="rounded-lg border border-red-200 bg-[#FFF1F2] p-3 text-center">
 
-              <div className="text-2xl font-bold text-red-200">
+              <div className="text-2xl font-bold text-[#C62828]">
                 {peopleCount !== null &&
                 peopleCount > 0
                   ? "HIGH"
                   : "—"}
               </div>
 
-              <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-red-200">
+              <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-[#C62828]">
                 Rescue priority
               </div>
 
             </div>
 
 
-            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-center">
+            <div className="rounded-lg border border-amber-200 bg-[#FFF7ED] p-3 text-center">
 
-              <div className="text-2xl font-bold text-amber-200">
+              <div className="text-2xl font-bold text-[#D97706]">
                 {detections.length}
               </div>
 
-              <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-amber-200">
-                Detection boxes
+              <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-[#D97706]">
+                Detections
               </div>
 
             </div>
 
 
-            <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-3 text-center">
+            <div className="rounded-lg border border-blue-200 bg-[#EAF3F8] p-3 text-center">
 
-              <div className="text-2xl font-bold text-sky-200">
+              <div className="text-2xl font-bold text-[#1261A0]">
                 {peopleCount !== null
-                  ? currentConfidence
+                  ? highestDetectionConfidence
                   : "—"}
                 {peopleCount !== null &&
                   "%"}
               </div>
 
-              <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-sky-200">
-                Avg. confidence
+              <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-[#1261A0]">
+                Highest confidence
               </div>
 
             </div>
@@ -683,22 +688,22 @@ export default function DronePage() {
       <Panel className="p-5">
 
         <SectionHeader
-          eyebrow="AI analysis"
-          title="Detection metrics"
+          eyebrow="Analysis metrics"
+          title="Person detection metrics"
           icon="ShieldCheck"
         />
 
         <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
 
-          <div className="rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
 
-            <div className="mb-3 flex items-center justify-between text-sm text-slate-300">
+            <div className="mb-3 flex items-center justify-between text-sm text-[#486581]">
 
               <span>
                 Average detection confidence
               </span>
 
-              <span className="font-semibold text-white">
+              <span className="font-semibold text-[#173B5E]">
 
                 {peopleCount !== null
                   ? `${currentConfidence}%`
@@ -724,13 +729,13 @@ export default function DronePage() {
           </div>
 
 
-          <div className="rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
 
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-              AI recommendation
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#627D98]">
+              Operational note
             </div>
 
-            <p className="mt-2 text-sm text-slate-200">
+            <p className="mt-2 text-sm text-[#486581]">
 
               {peopleCount !== null
                 ? peopleCount > 0
@@ -740,7 +745,7 @@ export default function DronePage() {
                         : ""
                     } detected. Review the location for rescue prioritization.`
                   : "No people detected in this image."
-                : droneAnalysis.recommendation}
+                : "Analyze an image to generate an operational result."}
 
             </p>
 
@@ -765,14 +770,14 @@ export default function DronePage() {
 
         {history.length === 0 ? (
 
-          <div className="mt-4 rounded-2xl border border-dashed border-slate-700 bg-slate-950/40 p-8 text-center">
+          <div className="mt-4 rounded-lg border border-dashed border-[#D6E2EE] bg-[#EAF3F8] p-8 text-center">
 
             <Icon
               name="Radar"
               size={28}
             />
 
-            <p className="mt-3 text-sm text-slate-400">
+            <p className="mt-3 text-sm text-[#486581]">
               No drone detections recorded yet.
             </p>
 
@@ -791,7 +796,7 @@ export default function DronePage() {
 
                 <div
                   key={item.id}
-                  className="flex flex-col gap-4 rounded-2xl border border-slate-700 bg-slate-950/60 p-4 lg:flex-row lg:items-center lg:justify-between"
+                  className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between"
                 >
 
                   {/* LEFT */}
@@ -813,7 +818,7 @@ export default function DronePage() {
 
                     </div>
 
-                    <div className="mt-2 truncate text-sm font-semibold text-white">
+                    <div className="mt-2 truncate text-sm font-semibold text-[#0f2742]">
                       {item.filename}
                     </div>
 
@@ -830,9 +835,9 @@ export default function DronePage() {
 
                   <div className="grid grid-cols-3 gap-3 lg:min-w-[420px]">
 
-                    <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-3 text-center">
+                    <div className="rounded-md border border-[#D6E2EE] bg-white p-3 text-center">
 
-                      <div className="text-lg font-bold text-white">
+                      <div className="text-lg font-bold text-[#0f2742]">
                         {item.peopleCount}
                       </div>
 
@@ -843,27 +848,27 @@ export default function DronePage() {
                     </div>
 
 
-                    <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-3 text-center">
+                    <div className="rounded-md border border-[#D6E2EE] bg-white p-3 text-center">
 
-                      <div className="text-lg font-bold text-sky-200">
-                        {item.confidence}%
+                      <div className="text-lg font-bold text-[#1261A0]">
+                        {item.highestConfidence ?? item.averageConfidence}%
                       </div>
 
                       <div className="text-[9px] font-medium uppercase tracking-[0.12em] text-slate-500">
-                        Avg. confidence
+                        Highest confidence
                       </div>
 
                     </div>
 
 
-                    <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-3 text-center">
+                    <div className="rounded-md border border-[#D6E2EE] bg-white p-3 text-center">
 
-                      <div className="text-lg font-bold text-emerald-200">
-                        AI
+                      <div className="text-lg font-bold text-[#18864B]">
+                        {item.peopleCount > 0 ? "Review" : "Clear"}
                       </div>
 
                       <div className="text-[9px] font-medium uppercase tracking-[0.12em] text-slate-500">
-                        Detection
+                        Response
                       </div>
 
                     </div>

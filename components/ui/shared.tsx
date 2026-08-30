@@ -14,19 +14,19 @@ export function Icon({ name, size = 18, className = '' }: { name: string; size?:
 
 export function StatusBadge({ label, tone = 'neutral' }: { label: string; tone?: Tone }) {
   const styles: Record<Tone, string> = {
-    critical: 'border-red-500/30 bg-red-500/15 text-red-200',
-    high: 'border-amber-500/30 bg-amber-500/15 text-amber-200',
-    medium: 'border-sky-500/30 bg-sky-500/15 text-sky-200',
-    good: 'border-emerald-500/30 bg-emerald-500/15 text-emerald-200',
-    neutral: 'border-slate-500/30 bg-slate-500/15 text-slate-200',
-    warning: 'border-orange-500/30 bg-orange-500/15 text-orange-200',
+    critical: 'border-red-200 bg-red-50 text-red-700',
+    high: 'border-amber-200 bg-amber-50 text-amber-700',
+    medium: 'border-blue-200 bg-blue-50 text-blue-700',
+    good: 'border-green-200 bg-green-50 text-green-700',
+    neutral: 'border-[#D6E2EE] bg-[#EAF3F8] text-[#49657D]',
+    warning: 'border-orange-200 bg-orange-50 text-orange-700',
   }
 
-  return <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${styles[tone]}`}>{label}</span>
+  return <span className={`inline-flex items-center rounded-md border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] ${styles[tone]}`}>{label}</span>
 }
 
 export function Panel({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div className={`rounded-2xl border border-slate-700/80 bg-slate-900/70 shadow-[0_20px_60px_rgba(2,6,23,0.45)] ${className}`}>{children}</div>
+  return <div className={`rounded-lg border border-slate-200 bg-white shadow-sm ${className}`}>{children}</div>
 }
 
 export function SectionHeader({
@@ -44,13 +44,13 @@ export function SectionHeader({
     <div className="mb-4 flex items-center justify-between gap-3">
       <div className="flex items-center gap-3">
         {icon && (
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-500/20 bg-cyan-500/10 text-cyan-200">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md border border-[#D6E2EE] bg-[#EAF3F8] text-[#1261A0]">
             <Icon name={icon} size={16} />
           </div>
         )}
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">{eyebrow}</div>
-          <h3 className="mt-1 text-lg font-semibold text-slate-100">{title}</h3>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#627D98]">{eyebrow}</div>
+          <h3 className="mt-1 text-lg font-semibold text-[#173B5E]">{title}</h3>
         </div>
       </div>
       {action}
@@ -72,39 +72,39 @@ export function MetricCard({
   tone?: Tone
 }) {
   const toneMap: Record<Tone, string> = {
-    critical: 'text-red-200',
-    high: 'text-amber-200',
-    medium: 'text-sky-200',
-    good: 'text-emerald-200',
-    neutral: 'text-slate-200',
-    warning: 'text-orange-200',
+    critical: 'text-[#d92d20]',
+    high: 'text-[#e58a00]',
+    medium: 'text-[#2563eb]',
+    good: 'text-[#16803c]',
+    neutral: 'text-[#0f2742]',
+    warning: 'text-[#e58a00]',
   }
 
   return (
     <Panel className="p-4">
       <div className="flex items-center justify-between">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-600 bg-slate-800/80 text-sky-200">
+        <div className="flex h-9 w-9 items-center justify-center rounded-md border border-[#D6E2EE] bg-[#EAF3F8] text-[#1261A0]">
           <Icon name={icon} size={18} />
         </div>
         <StatusBadge label={meta ?? 'Live'} tone={tone} />
       </div>
-      <div className="mt-4 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">{label}</div>
-      <div className={`mt-2 text-3xl font-bold ${toneMap[tone]}`}>{value}</div>
+      <div className="mt-4 text-[11px] font-medium uppercase tracking-[0.14em] text-[#627D98]">{label}</div>
+      <div className={`mt-2 text-3xl font-bold tabular-nums ${toneMap[tone]}`}>{value}</div>
     </Panel>
   )
 }
 
 export function ProgressBar({ value, tone = 'blue' }: { value: number; tone?: 'blue' | 'amber' | 'red' | 'green' }) {
   const palette = {
-    blue: 'from-sky-500 to-cyan-400',
-    amber: 'from-amber-500 to-orange-400',
-    red: 'from-red-500 to-rose-400',
-    green: 'from-emerald-500 to-teal-400',
+    blue: 'bg-[#2563eb]',
+    amber: 'bg-[#e58a00]',
+    red: 'bg-[#d92d20]',
+    green: 'bg-[#16803c]',
   }
 
   return (
-    <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-800">
-      <div className={`h-full rounded-full bg-gradient-to-r ${palette[tone]}`} style={{ width: `${Math.min(100, Math.max(0, value))}%` }} />
+    <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#EAF3F8]">
+      <div className={`h-full rounded-full ${palette[tone]}`} style={{ width: `${Math.min(100, Math.max(0, value))}%` }} />
     </div>
   )
 }

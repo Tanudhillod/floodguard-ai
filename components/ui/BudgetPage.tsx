@@ -14,16 +14,16 @@ export default function BudgetPage() {
     <div className="space-y-6">
       <section className="grid gap-4 md:grid-cols-3">
         <Panel className="p-5">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Allocated</div>
-          <div className="mt-3 text-3xl font-bold text-white">{currency.format(allocated)}</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Allocated</div>
+          <div className="mt-3 text-3xl font-bold text-[#0f2742]">{currency.format(allocated)}</div>
         </Panel>
         <Panel className="p-5">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Spent</div>
-          <div className="mt-3 text-3xl font-bold text-amber-200">{currency.format(spent)}</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Spent</div>
+          <div className="mt-3 text-3xl font-bold text-[#e58a00]">{currency.format(spent)}</div>
         </Panel>
         <Panel className="p-5">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Remaining</div>
-          <div className="mt-3 text-3xl font-bold text-emerald-200">{currency.format(remaining)}</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Remaining</div>
+          <div className="mt-3 text-3xl font-bold text-[#16803c]">{currency.format(remaining)}</div>
         </Panel>
       </section>
 
@@ -34,11 +34,11 @@ export default function BudgetPage() {
           {budget.map((entry) => {
             const percentage = Math.round((entry.spent / entry.allocated) * 100)
             return (
-              <div key={entry.category} className="rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
+              <div key={entry.category} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
-                    <div className="text-base font-semibold text-white">{entry.category}</div>
-                    <div className="mt-1 text-xs text-slate-400">{currency.format(entry.spent)} spent of {currency.format(entry.allocated)}</div>
+                    <div className="text-base font-semibold text-[#0f2742]">{entry.category}</div>
+                    <div className="mt-1 text-xs text-slate-500">{currency.format(entry.spent)} spent of {currency.format(entry.allocated)}</div>
                   </div>
                   <StatusBadge label={entry.status} tone={entry.status === 'At risk' ? 'warning' : entry.status === 'Monitoring' ? 'medium' : entry.status === 'Healthy' ? 'good' : 'neutral'} />
                 </div>

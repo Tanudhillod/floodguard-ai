@@ -5,14 +5,14 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        floodbg: '#08111f',
-        floodcard: '#0d1a2a',
-        floodborder: '#152a3d',
-        floodmuted: '#8295a8',
-        floodprimary: '#2389d9',
+        floodbg: '#f5f7fa',
+        floodcard: '#ffffff',
+        floodborder: '#d9e1ea',
+        floodmuted: '#55738C',
+        floodprimary: '#2563eb',
       },
       borderRadius: {
-        lg: '0.75rem',
+        lg: '0.5rem',
       },
     },
   },
