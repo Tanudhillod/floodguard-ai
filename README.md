@@ -1,30 +1,76 @@
-# floodguard-ai
+# FloodGuard AI
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
+FloodGuard is an AI-powered emergency response system designed to help identify flood risks, analyze emergency SOS requests, detect people from drone imagery, and prioritize incidents for faster response.
 
-## Built with v0
+## Features
 
-This repository is linked to a [v0](https://v0.app) project. You can continue developing by visiting the link below -- start new chats to make changes, and v0 will push commits directly to this repo. Every merge to `main` will automatically deploy.
+- **Flood Risk Analysis** — ML-based flood risk prediction.
+- **Drone Intelligence** — Detects people from drone imagery.
+- **SOS Intelligence** — Uses Lyzr AI to extract structured information from emergency messages.
+- **Multi-Modal Priority** — Combines SOS, drone, and flood-risk information to prioritize emergency incidents.
+- **User SOS Interface** — Mobile-friendly interface for submitting emergency requests.
+- **Administrator Command Center** — Monitor and manage emergency response operations.
 
-[Continue working on v0 →](https://v0.app/chat/projects/prj_XEfmmxGuATJGad0qZP8QBWnIOVQ1)
+## Tech Stack
 
-## Getting Started
+**Frontend:** Next.js, React, TypeScript, Tailwind CSS  
+**Backend:** FastAPI, Python  
+**AI/ML:** Lyzr, Ultralytics YOLO, Scikit-learn/Joblib  
+**Maps & Routing:** Leaflet, Google Maps, OSRM
 
-First, run the development server:
+## How to Run
+
+### 1. Clone the repository
 
 ```bash
+git clone <repository-url>
+cd floodguard-ai
+2. Backend
+
+Create and activate a virtual environment:
+
+python -m venv .venv
+.venv\Scripts\activate
+
+Install dependencies:
+
+python -m pip install -r backend\requirements.txt
+
+Create a .env file with the required API keys:
+
+LYZR_API_KEY=your_lyzr_api_key
+LYZR_AGENT_ID=your_lyzr_agent_id
+LYZR_USER_ID=floodguard
+
+Start the backend:
+
+python -m uvicorn backend.main:app --reload
+
+Backend:
+
+http://127.0.0.1:8000
+3. Frontend
+
+Open a new terminal in the project folder:
+
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Frontend:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+http://localhost:3000
+Application
 
-## Learn More
+Open:
+
+http://localhost:3000
+
+Choose:
+
+User — Submit emergency SOS requests.
+Administrator — Access the emergency response command center.
+
+Note: Never commit .env files or API keys to the repository.
 
 To learn more, take a look at the following resources:
 
