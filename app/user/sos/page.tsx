@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import {
   ArrowLeft,
   Check,
@@ -51,23 +52,23 @@ type SosResponse = {
     mobility_impaired?: string | number | null
   }
 
-  situation?: string
+  situation?: string | null
 
   request?: {
-    type?: string
-    resources?: string[]
+    type?: string | null
+    resources?: string[] | null
   }
 
   needs?: {
-    food?: boolean
-    water?: boolean
-    medicine?: boolean
-    shelter?: boolean
-    rescue?: boolean
-    medical_transfer?: boolean
+    food?: boolean | null
+    water?: boolean | null
+    medicine?: boolean | null
+    shelter?: boolean | null
+    rescue?: boolean | null
+    medical_transfer?: boolean | null
   }
 
-  contact_info?: string[]
+  contact_info?: string[] | null
 
   original_message?: string
 }
@@ -121,21 +122,34 @@ export default function UserSOSPage() {
     "home" | "form" | "submitted"
   >("home")
 
-  const [selectedNeeds, setSelectedNeeds] = useState<Need[]>([])
+  const [selectedNeeds, setSelectedNeeds] =
+    useState<Need[]>([])
+
   const [people, setPeople] = useState(1)
+
   const [message, setMessage] = useState("")
 
   const [location, setLocation] = useState("")
-  const [latitude, setLatitude] = useState<number | null>(null)
-  const [longitude, setLongitude] = useState<number | null>(null)
 
-  const [locationStatus, setLocationStatus] = useState<
-    "idle" | "loading" | "success" | "error"
-  >("idle")
+  const [latitude, setLatitude] =
+    useState<number | null>(null)
 
-  const [submitting, setSubmitting] = useState(false)
+  const [longitude, setLongitude] =
+    useState<number | null>(null)
+
+  const [locationStatus, setLocationStatus] =
+    useState<
+      "idle" | "loading" | "success" | "error"
+    >("idle")
+
+  const [submitting, setSubmitting] =
+    useState(false)
+
   const [error, setError] = useState("")
-  const [result, setResult] = useState<SosResponse | null>(null)
+
+  const [result, setResult] =
+    useState<SosResponse | null>(null)
+
 
   function toggleNeed(need: Need) {
     setSelectedNeeds((current) =>
@@ -144,6 +158,7 @@ export default function UserSOSPage() {
         : [...current, need]
     )
   }
+
 
   function getLocation() {
     if (!navigator.geolocation) {
@@ -179,6 +194,7 @@ export default function UserSOSPage() {
     )
   }
 
+
   function buildMessage() {
     const needsText =
       selectedNeeds.length > 0
@@ -197,45 +213,97 @@ export default function UserSOSPage() {
     } need help. Needs: ${needsText}. Location: ${locationText}. Situation: ${description}`
   }
 
+
   async function submitSOS() {
     setError("")
 
     if (selectedNeeds.length === 0) {
-      setError("Please select at least one type of help.")
+      setError(
+        "Please select at least one type of help."
+      )
       return
     }
 
     if (!message.trim()) {
-      setError("Please briefly describe what happened.")
+      setError(
+        "Please briefly describe what happened."
+      )
       return
     }
 
     setSubmitting(true)
 
     try {
-      const response = await fetch(`${API_URL}/sos`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: buildMessage(),
-        }),
-      })
+      const response = await fetch(
+        `${API_URL}/sos`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: buildMessage(),
+          }),
+        }
+      )
 
       const data = await response.json()
 
       if (!response.ok) {
         throw new Error(
-          data?.detail || "Unable to send SOS request."
+          data?.detail ||
+            "Unable to send SOS request."
         )
       }
-
-      setResult(data)
-
+      
+      /*
+       * Backend may return the extracted information either:
+       *
+       * 1. Directly:
+       *    {
+       *      location: {...},
+       *      people: {...},
+       *      request: {...}
+       *    }
+       *
+       * 2. Inside extracted_data:
+       *    {
+       *      extracted_data: {
+       *        location: {...},
+       *        people: {...},
+       *        request: {...}
+       *      }
+       *    }
+       *
+       * Handle both formats.
+       */
+      
+      let extracted = data?.extracted_data ?? data
+      
+      // extracted_data may also arrive as a JSON string
+      if (typeof extracted === "string") {
+        try {
+          extracted = JSON.parse(extracted)
+        } catch {
+          extracted = {}
+        }
+      }
+      
+      // Keep the original message available on the result screen
+      const finalResult: SosResponse = {
+        ...extracted,
+        original_message:
+          data?.original_message ??
+          extracted?.original_message ??
+          buildMessage(),
+      }
+      
+      setResult(finalResult)
+      
       // Feature 3 has successfully analyzed the request.
       // Only now move to the submitted/result screen.
       setStep("submitted")
+
     } catch (err) {
       setError(
         err instanceof Error
@@ -247,6 +315,7 @@ export default function UserSOSPage() {
     }
   }
 
+
   function reset() {
     setStep("home")
     setSelectedNeeds([])
@@ -254,7 +323,12 @@ export default function UserSOSPage() {
     setMessage("")
     setResult(null)
     setError("")
+    setLocation("")
+    setLatitude(null)
+    setLongitude(null)
+    setLocationStatus("idle")
   }
+
 
   return (
     <main className="min-h-screen bg-[#f7fafc] text-[#102a43]">
@@ -264,18 +338,22 @@ export default function UserSOSPage() {
       ============================================================ */}
 
       <header className="border-b border-slate-200 bg-white">
+
         <div className="mx-auto flex max-w-4xl items-center justify-between px-5 py-4 sm:px-8">
 
           <div className="flex items-center gap-3">
 
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#0f2742] text-white">
+
               <Cross
                 size={18}
                 strokeWidth={2.5}
               />
+
             </div>
 
             <div>
+
               <div className="text-base font-semibold tracking-tight">
                 FloodGuard
               </div>
@@ -283,16 +361,21 @@ export default function UserSOSPage() {
               <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-400">
                 Emergency assistance
               </div>
+
             </div>
 
           </div>
 
           <div className="hidden items-center gap-2 text-xs text-slate-500 sm:flex">
+
             <span className="h-2 w-2 rounded-full bg-green-500" />
+
             Emergency network online
+
           </div>
 
         </div>
+
       </header>
 
 
@@ -301,12 +384,15 @@ export default function UserSOSPage() {
       ============================================================ */}
 
       {step === "home" && (
+
         <section className="mx-auto flex min-h-[calc(100vh-73px)] max-w-4xl items-center justify-center px-5 py-12 sm:px-8">
 
           <div className="w-full max-w-xl text-center">
 
             <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-red-600">
+
               <ShieldAlert size={28} />
+
             </div>
 
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
@@ -362,16 +448,16 @@ export default function UserSOSPage() {
           </div>
 
         </section>
+
       )}
 
 
       {/* ============================================================
           SCREEN 2A — ANALYZING
-          IMPORTANT:
-          This is separate from the form and submitted screen.
       ============================================================ */}
 
       {step === "form" && submitting && (
+
         <section className="flex min-h-[70vh] items-center justify-center px-5">
 
           <div className="w-full max-w-md text-center">
@@ -398,15 +484,16 @@ export default function UserSOSPage() {
           </div>
 
         </section>
+
       )}
 
 
       {/* ============================================================
           SCREEN 2B — FORM
-          Only rendered when step=form AND submitting=false.
       ============================================================ */}
 
       {step === "form" && !submitting && (
+
         <section className="mx-auto max-w-2xl px-5 py-8 sm:px-8 sm:py-12">
 
           <button
@@ -437,9 +524,7 @@ export default function UserSOSPage() {
           </div>
 
 
-          {/* ========================================================
-              LOCATION
-          ======================================================== */}
+          {/* LOCATION */}
 
           <div className="mb-7 rounded-xl border border-slate-200 bg-white p-4">
 
@@ -469,14 +554,12 @@ export default function UserSOSPage() {
 
               </div>
 
-
               {locationStatus === "success" && (
                 <Check
                   size={18}
                   className="mt-1 text-green-600"
                 />
               )}
-
 
               {locationStatus === "error" && (
                 <button
@@ -492,9 +575,7 @@ export default function UserSOSPage() {
           </div>
 
 
-          {/* ========================================================
-              NEEDS
-          ======================================================== */}
+          {/* NEEDS */}
 
           <div>
 
@@ -512,6 +593,7 @@ export default function UserSOSPage() {
                 const IconComponent = option.icon
 
                 return (
+
                   <button
                     key={option.id}
                     onClick={() =>
@@ -542,6 +624,7 @@ export default function UserSOSPage() {
                     </div>
 
                   </button>
+
                 )
 
               })}
@@ -551,9 +634,7 @@ export default function UserSOSPage() {
           </div>
 
 
-          {/* ========================================================
-              PEOPLE
-          ======================================================== */}
+          {/* PEOPLE */}
 
           <div className="mt-8">
 
@@ -594,9 +675,7 @@ export default function UserSOSPage() {
           </div>
 
 
-          {/* ========================================================
-              DESCRIPTION
-          ======================================================== */}
+          {/* DESCRIPTION */}
 
           <div className="mt-8">
 
@@ -630,20 +709,15 @@ export default function UserSOSPage() {
           )}
 
 
-          {/* ========================================================
-              SUBMIT
-          ======================================================== */}
+          {/* SUBMIT */}
 
           <button
             onClick={submitSOS}
             disabled={submitting}
             className="mt-7 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#c62828] px-5 text-sm font-semibold text-white transition hover:bg-[#ad2020] disabled:cursor-not-allowed disabled:opacity-60"
           >
-
             <Send size={16} />
-
             Send emergency request
-
           </button>
 
           <p className="mt-3 text-center text-[11px] leading-5 text-slate-400">
@@ -652,21 +726,16 @@ export default function UserSOSPage() {
           </p>
 
         </section>
+
       )}
 
 
       {/* ============================================================
           SCREEN 3 — SUBMITTED / FEATURE 3 RESULT
-          
-          IMPORTANT:
-          This is ONLY rendered when:
-          
-              step === "submitted"
-          
-          Therefore the form/analyzing screen cannot appear here.
       ============================================================ */}
 
       {step === "submitted" && (
+
         <section className="mx-auto max-w-2xl px-5 py-10 sm:px-8 sm:py-14">
 
           {/* SUCCESS HEADER */}
@@ -674,10 +743,12 @@ export default function UserSOSPage() {
           <div className="text-center">
 
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green-50 text-green-600">
+
               <Check
                 size={28}
                 strokeWidth={2.5}
               />
+
             </div>
 
             <p className="mt-5 text-xs font-semibold uppercase tracking-[0.2em] text-green-600">
@@ -697,7 +768,7 @@ export default function UserSOSPage() {
 
 
           {/* ========================================================
-              REQUEST SUMMARY
+              REQUEST DETAILS
           ======================================================== */}
 
           <div className="mt-9 overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -714,43 +785,261 @@ export default function UserSOSPage() {
 
               {/* LOCATION */}
 
-              <SummaryRow
-                icon={<MapPin size={17} />}
-                label="Location"
-                value={
-                  result?.location?.text ||
-                  "Location not identified"
-                }
-              />
+              {(
+                result?.location?.text ||
+                result?.location?.latitude !== null ||
+                result?.location?.longitude !== null
+              ) && (
+
+                <SummaryRow
+                  icon={<MapPin size={17} />}
+                  label="Location"
+                  value={[
+                    result?.location?.text,
+                    result?.location?.latitude !== null &&
+                    result?.location?.latitude !== undefined
+                      ? String(
+                          result.location.latitude
+                        )
+                      : null,
+                    result?.location?.longitude !== null &&
+                    result?.location?.longitude !== undefined
+                      ? String(
+                          result.location.longitude
+                        )
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" • ")}
+                />
+
+              )}
 
 
               {/* PEOPLE */}
 
-              <SummaryRow
-                icon={<Users size={17} />}
-                label="People"
-                value={
-                  result?.people?.total
-                    ? String(result.people.total)
-                    : "Not identified"
-                }
-              />
+              {result?.people?.total !== null &&
+                result?.people?.total !== undefined && (
+
+                  <SummaryRow
+                    icon={<Users size={17} />}
+                    label="People"
+                    value={String(
+                      result.people.total
+                    )}
+                  />
+
+                )}
 
 
               {/* HELP REQUESTED */}
 
-              <SummaryRow
-                icon={<ShieldAlert size={17} />}
-                label="Help requested"
-                value={
-                  result?.request?.resources?.join(" • ") ||
-                  "Not identified"
-                }
-              />
+              {result?.request?.resources &&
+                result.request.resources.length > 0 && (
+
+                  <SummaryRow
+                    icon={<ShieldAlert size={17} />}
+                    label="Help requested"
+                    value={result.request.resources.join(
+                      " • "
+                    )}
+                  />
+
+                )}
+
+
+              {/* REQUEST TYPE */}
+
+              {result?.request?.type && (
+
+                <SummaryRow
+                  icon={<ShieldAlert size={17} />}
+                  label="Emergency type"
+                  value={result.request.type}
+                />
+
+              )}
+
+
+              {/* CONTACT */}
+
+              {result?.contact_info &&
+                result.contact_info.length > 0 && (
+
+                  <SummaryRow
+                    icon={<Navigation size={17} />}
+                    label="Contact"
+                    value={result.contact_info.join(
+                      " • "
+                    )}
+                  />
+
+                )}
 
             </div>
 
           </div>
+
+
+          {/* ========================================================
+              EXTRACTED INFORMATION
+          ======================================================== */}
+
+          {result && (
+
+            <div className="mt-5 rounded-xl border border-slate-200 bg-white p-5">
+
+              <div className="text-sm font-semibold text-[#0f2742]">
+                Extracted information
+              </div>
+
+
+              {/* PEOPLE DETAILS */}
+
+              {result.people && (
+
+                <div className="mt-5">
+
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    People
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+
+                    {result.people.children != null && (
+                      <DetailItem
+                        label="Children"
+                        value={String(
+                          result.people.children
+                        )}
+                      />
+                    )}
+
+                    {result.people.elderly != null && (
+                      <DetailItem
+                        label="Elderly"
+                        value={String(
+                          result.people.elderly
+                        )}
+                      />
+                    )}
+
+                    {result.people.injured != null && (
+                      <DetailItem
+                        label="Injured"
+                        value={String(
+                          result.people.injured
+                        )}
+                      />
+                    )}
+
+                    {result.people.missing != null && (
+                      <DetailItem
+                        label="Missing"
+                        value={String(
+                          result.people.missing
+                        )}
+                      />
+                    )}
+
+                    {result.people.pregnant != null && (
+                      <DetailItem
+                        label="Pregnant"
+                        value={String(
+                          result.people.pregnant
+                        )}
+                      />
+                    )}
+
+                    {result.people.deceased != null && (
+                      <DetailItem
+                        label="Deceased"
+                        value={String(
+                          result.people.deceased
+                        )}
+                      />
+                    )}
+
+                    {result.people.mobility_impaired != null && (
+                      <DetailItem
+                        label="Mobility impaired"
+                        value={String(
+                          result.people.mobility_impaired
+                        )}
+                      />
+                    )}
+
+                  </div>
+
+                </div>
+
+              )}
+
+
+              {/* ASSISTANCE NEEDED */}
+
+              {result.needs && (
+
+                <div className="mt-6">
+
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    Assistance needed
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+
+                    {result.needs.rescue && (
+                      <NeedBadge label="Rescue" />
+                    )}
+
+                    {result.needs.water && (
+                      <NeedBadge label="Water" />
+                    )}
+
+                    {result.needs.food && (
+                      <NeedBadge label="Food" />
+                    )}
+
+                    {result.needs.medicine && (
+                      <NeedBadge label="Medicine" />
+                    )}
+
+                    {result.needs.shelter && (
+                      <NeedBadge label="Shelter" />
+                    )}
+
+                    {result.needs.medical_transfer && (
+                      <NeedBadge label="Medical transfer" />
+                    )}
+
+                  </div>
+
+                </div>
+
+              )}
+
+
+              {/* SITUATION */}
+
+              {result.situation && (
+
+                <div className="mt-6">
+
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    Situation
+                  </div>
+
+                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                    {result.situation}
+                  </p>
+
+                </div>
+
+              )}
+
+            </div>
+
+          )}
 
 
           {/* ========================================================
@@ -793,25 +1082,6 @@ export default function UserSOSPage() {
           </div>
 
 
-          {/* ========================================================
-              SITUATION
-          ======================================================== */}
-
-          {result?.situation && (
-            <div className="mt-5 rounded-xl border border-slate-200 bg-white p-5">
-
-              <div className="text-sm font-semibold text-[#0f2742]">
-                Situation reported
-              </div>
-
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                {result.situation}
-              </p>
-
-            </div>
-          )}
-
-
           {/* SEND ANOTHER */}
 
           <button
@@ -822,7 +1092,18 @@ export default function UserSOSPage() {
             <ChevronRight size={16} />
           </button>
 
+          <div className="mt-4 flex justify-center">
+            <Link
+              href="/user"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-[#0f2742] shadow-sm transition hover:bg-slate-50"
+            >
+              <ArrowLeft size={16} />
+              Back to Dashboard
+            </Link>
+          </div>
+
         </section>
+
       )}
 
     </main>
@@ -843,15 +1124,19 @@ function InfoItem({
   label: string
   value: string
 }) {
+
   return (
+
     <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-left">
 
       <div className="flex items-center gap-2 text-slate-400">
+
         {icon}
 
         <span className="text-[10px] font-semibold uppercase tracking-wider">
           {label}
         </span>
+
       </div>
 
       <div className="mt-1 text-xs font-medium text-[#0f2742]">
@@ -859,6 +1144,7 @@ function InfoItem({
       </div>
 
     </div>
+
   )
 }
 
@@ -876,7 +1162,9 @@ function SummaryRow({
   label: string
   value: string
 }) {
+
   return (
+
     <div className="flex items-center gap-4 px-5 py-4">
 
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-slate-500">
@@ -889,13 +1177,64 @@ function SummaryRow({
           {label}
         </div>
 
-        <div className="mt-1 text-sm font-medium leading-5 text-[#0f2742] break-words">
-         {value}
+        <div className="mt-1 break-words text-sm font-medium leading-5 text-[#0f2742]">
+          {value}
         </div>
 
       </div>
 
     </div>
+
+  )
+}
+
+
+/* ================================================================
+   DETAIL ITEM
+================================================================ */
+
+function DetailItem({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
+
+  return (
+
+    <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-3">
+
+      <div className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+        {label}
+      </div>
+
+      <div className="mt-1 text-sm font-semibold text-[#0f2742]">
+        {value}
+      </div>
+
+    </div>
+
+  )
+}
+
+
+/* ================================================================
+   NEED BADGE
+================================================================ */
+
+function NeedBadge({
+  label,
+}: {
+  label: string
+}) {
+
+  return (
+
+    <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700">
+      {label}
+    </span>
+
   )
 }
 
@@ -915,7 +1254,9 @@ function StatusStep({
   description: string
   last?: boolean
 }) {
+
   return (
+
     <div className="relative flex gap-3">
 
       {!last && (
@@ -959,5 +1300,6 @@ function StatusStep({
       </div>
 
     </div>
+
   )
 }

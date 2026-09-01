@@ -1,7 +1,10 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-
+from fastapi import Depends
+from sqlalchemy.orm import Session
+from backend.database import Base, engine, get_db
+from backend.models import SOSRequest as SOSRequestModel
 import cv2
 import numpy as np
 import json
@@ -59,6 +62,7 @@ app = FastAPI(
     ),
     version="2.1.0"
 )
+Base.metadata.create_all(bind=engine)
 # ============================================================
 # FEATURE 1 / 3 / 4 REQUEST MODELS
 # ============================================================
@@ -86,7 +90,10 @@ class PriorityRequest(BaseModel):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+   allow_origins=[
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -285,29 +292,124 @@ async def flood_risk(request: FloodRiskRequest):
 # ============================================================
 
 @app.post("/sos")
-async def analyze_sos(request: SOSRequest):
+async def analyze_sos(
+    request: SOSRequest,
+    db: Session = Depends(get_db)
+):
 
     try:
+
+        # ========================================================
+        # FEATURE 3 — SOS INTELLIGENCE
+        # ========================================================
 
         result = extract_sos_llm(
             request.message
         )
 
-        return result
+
+        # ========================================================
+        # FEATURE 4 — PRIORITY INTELLIGENCE
+        # ========================================================
+
+        priority_result = calculate_priority(
+            sos_data=result,
+            feature2_people_count=None,
+            flood_severity=0.0
+        )
+
+
+        # Add Feature 4 result to the extracted data
+        result["priority"] = priority_result
+
+
+        # ========================================================
+        # SAVE SOS TO DATABASE
+        # ========================================================
+
+        sos_record = SOSRequestModel(
+            original_message=request.message,
+            extracted_data=json.dumps(result),
+            status="Pending"
+        )
+
+        db.add(sos_record)
+        db.commit()
+        db.refresh(sos_record)
+
+
+        # ========================================================
+        # RETURN RESULT
+        # ========================================================
+
+        return {
+            "id": sos_record.id,
+            "created_at": sos_record.created_at,
+            "status": sos_record.status,
+            "original_message": sos_record.original_message,
+            "extracted_data": result
+        }
+
 
     except ValueError as e:
+
+        db.rollback()
 
         raise HTTPException(
             status_code=400,
             detail=str(e)
         )
 
+
     except Exception as e:
+
+        db.rollback()
 
         raise HTTPException(
             status_code=500,
             detail=f"SOS analysis failed: {str(e)}"
         )
+
+
+# ============================================================
+# GET STORED SOS REQUESTS
+# ============================================================
+
+@app.get("/sos")
+def get_sos_requests(
+    db: Session = Depends(get_db)
+):
+
+    requests = (
+        db.query(SOSRequestModel)
+        .order_by(
+            SOSRequestModel.created_at.desc()
+        )
+        .all()
+    )
+
+    result = []
+
+    for request in requests:
+
+        try:
+            extracted_data = json.loads(
+                request.extracted_data
+            )
+        except Exception:
+            extracted_data = {}
+
+        result.append({
+            "id": request.id,
+            "created_at": request.created_at,
+            "status": request.status,
+            "original_message": request.original_message,
+            "extracted_data": extracted_data
+        })
+
+    return {
+        "requests": result
+    }
     
     # ============================================================
 # FEATURE 4 — MULTI-MODAL PRIORITY
