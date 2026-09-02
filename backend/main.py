@@ -1,16 +1,14 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from fastapi import Depends
-from sqlalchemy.orm import Session
-from backend.database import Base, engine, get_db
-from backend.models import SOSRequest as SOSRequestModel
+
 import cv2
 import numpy as np
 import json
 import os
 import subprocess
 import math
+import time
 import urllib.request
 import urllib.error
 import urllib.parse
@@ -148,7 +146,16 @@ def health():
 # ============================================================
 
 @app.post("/predict")
-async def predict(file: UploadFile = File(...)):
+async def predict(
+    file: UploadFile = File(...),
+    latitude: Optional[float] = Form(None),
+    longitude: Optional[float] = Form(None),
+    location: Optional[str] = Form(None)
+):
+
+    # --------------------------------------------------------
+    # Validate image
+    # --------------------------------------------------------
 
     if not file.content_type or not file.content_type.startswith(
         "image/"
@@ -159,6 +166,12 @@ async def predict(file: UploadFile = File(...)):
         )
 
     image_bytes = await file.read()
+
+    if not image_bytes:
+        raise HTTPException(
+            status_code=400,
+            detail="Uploaded image is empty."
+        )
 
     image_array = np.frombuffer(
         image_bytes,
@@ -176,16 +189,26 @@ async def predict(file: UploadFile = File(...)):
             detail="Could not process the uploaded image."
         )
 
+    # --------------------------------------------------------
+    # Run AI detection
+    # --------------------------------------------------------
+
     try:
+
         detections, annotated_image = detector.predict(
             image
         )
 
     except Exception as e:
+
         raise HTTPException(
             status_code=500,
             detail=f"Detection failed: {str(e)}"
         )
+
+    # --------------------------------------------------------
+    # Format detections
+    # --------------------------------------------------------
 
     formatted_detections = []
 
@@ -194,12 +217,97 @@ async def predict(file: UploadFile = File(...)):
         x1, y1, x2, y2, confidence = detection
 
         formatted_detections.append({
+
             "x1": round(x1, 2),
+
             "y1": round(y1, 2),
+
             "x2": round(x2, 2),
+
             "y2": round(y2, 2),
-            "confidence": round(confidence, 4)
+
+            "confidence": round(
+                confidence,
+                4
+            )
         })
+
+    # --------------------------------------------------------
+    # Calculate detection statistics
+    # --------------------------------------------------------
+
+    people_detected = len(
+        formatted_detections
+    )
+
+    if people_detected > 0:
+
+        average_confidence = (
+            sum(
+                detection["confidence"]
+                for detection
+                in formatted_detections
+            )
+            /
+            people_detected
+        )
+
+    else:
+
+        average_confidence = 0.0
+
+    # --------------------------------------------------------
+    # Upload original image to Supabase Storage
+    # --------------------------------------------------------
+
+    try:
+
+        original_filename = (
+            file.filename
+            or
+            "drone_image.jpg"
+        )
+
+        # Prevent directory traversal
+        safe_filename = os.path.basename(
+            original_filename
+        )
+
+        # Make filename unique
+        timestamp = int(time.time() * 1000)
+
+        image_path = (
+            f"detections/"
+            f"{timestamp}_"
+            f"{safe_filename}"
+        )
+
+        supabase.storage.from_(
+            "drone-images"
+        ).upload(
+            image_path,
+            image_bytes,
+            {
+                "content-type":
+                    file.content_type
+                    or
+                    "image/jpeg"
+            }
+        )
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                f"Image upload to Supabase failed: "
+                f"{str(e)}"
+            )
+        )
+
+    # --------------------------------------------------------
+    # Encode annotated image for existing frontend
+    # --------------------------------------------------------
 
     success, encoded_image = cv2.imencode(
         ".jpg",
@@ -207,34 +315,209 @@ async def predict(file: UploadFile = File(...)):
     )
 
     if not success:
+
         raise HTTPException(
             status_code=500,
             detail="Could not encode annotated image."
         )
 
+    # --------------------------------------------------------
+    # Upload processed/annotated image to Supabase
+    # --------------------------------------------------------
+
+    try:
+
+        processed_image_path = (
+            f"detections/processed_"
+            f"{timestamp}_"
+            f"{safe_filename}"
+        )
+
+        supabase.storage.from_(
+            "drone-images"
+        ).upload(
+            processed_image_path,
+            encoded_image.tobytes(),
+            {
+                "content-type":
+                    "image/jpeg"
+            }
+        )
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                f"Processed image upload to Supabase failed: "
+                f"{str(e)}"
+            )
+        )
+
+    # --------------------------------------------------------
+    # Save detection information to Supabase
+    # --------------------------------------------------------
+
+    try:
+
+        detection_record = {
+
+            "image_path":
+                processed_image_path,
+
+            "location":
+                location,
+
+            "latitude":
+                latitude,
+
+            "longitude":
+                longitude,
+
+            # Current detector does not calculate
+            # analysis duration.
+            "time_span":
+                None,
+
+            "people_detected":
+                people_detected,
+
+            # Current person detector does not
+            # calculate flooded area.
+            "flood_area":
+                None,
+
+            # Do not use HIGH based only on
+            # people detection.
+            "severity":
+                None,
+
+            "confidence":
+                round(
+                    average_confidence,
+                    4
+                ),
+
+            "model_name":
+                "floodguard_person_v2.pt",
+
+            "analysis_status":
+                "COMPLETED"
+        }
+
+        db_response = (
+            supabase
+            .table("drone_detections")
+            .insert(
+                detection_record
+            )
+            .execute()
+        )
+
+    except Exception as e:
+
+        # ----------------------------------------------------
+        # If DB insert fails, remove the uploaded image
+        # so we don't leave an orphaned Storage object.
+        # ----------------------------------------------------
+
+        try:
+
+            supabase.storage.from_(
+                "drone-images"
+            ).remove([
+                image_path,
+                processed_image_path
+            ])
+
+        except Exception:
+
+            pass
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                f"Detection data could not be saved "
+                f"to Supabase: {str(e)}"
+            )
+        )
+
+    # --------------------------------------------------------
+    # Existing frontend metadata
+    # --------------------------------------------------------
+
     metadata = {
-        "success": True,
-        "filename": file.filename,
-        "people_count": len(formatted_detections),
-        "detections": formatted_detections
+
+        "success":
+            True,
+
+        "filename":
+            file.filename,
+
+        "people_count":
+            people_detected,
+
+        "detections":
+            formatted_detections,
+
+        # New Supabase-related information
+        "latitude":
+            latitude,
+
+        "longitude":
+            longitude,
+
+        "location":
+            location,
+
+        "image_path":
+            processed_image_path,
+
+        "confidence":
+            round(
+                average_confidence,
+                4
+            ),
+
+        "model_name":
+            "floodguard_person_v2.pt",
+
+        "analysis_status":
+            "COMPLETED"
     }
 
     metadata_json = json.dumps(
         metadata
     )
 
+    # --------------------------------------------------------
+    # Keep existing multipart/mixed response
+    # --------------------------------------------------------
+
     boundary = "FloodGuardBoundary"
 
     body = (
+
         f"--{boundary}\r\n"
+
         f"Content-Type: application/json\r\n"
-        f"Content-Disposition: form-data; name=\"metadata\"\r\n"
+
+        f"Content-Disposition: "
+        f"form-data; name=\"metadata\"\r\n"
+
         f"\r\n"
+
         f"{metadata_json}\r\n"
+
         f"--{boundary}\r\n"
+
         f"Content-Type: image/jpeg\r\n"
-        f"Content-Disposition: inline; name=\"image\"; filename=\"result.jpg\"\r\n"
+
+        f"Content-Disposition: inline; "
+        f"name=\"image\"; filename=\"result.jpg\"\r\n"
+
         f"\r\n"
+
     ).encode("utf-8")
 
     body += encoded_image.tobytes()
@@ -245,7 +528,10 @@ async def predict(file: UploadFile = File(...)):
 
     return Response(
         content=body,
-        media_type=f"multipart/mixed; boundary={boundary}"
+        media_type=(
+            f"multipart/mixed; "
+            f"boundary={boundary}"
+        )
     )
 # ============================================================
 # FEATURE 1 — FLOOD RISK

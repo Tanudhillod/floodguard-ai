@@ -26,23 +26,70 @@ type DetectionHistory = {
   highestConfidence: number
   timestamp: string
   status: "Completed"
+  latitude?: number | null
+  longitude?: number | null
+  location?: string | null
+  modelName?: string
+  analysisStatus?: string
 }
 
 const HISTORY_KEY = "floodguard_detection_history"
 
 export default function DronePage() {
-  const [selectedImage, setSelectedImage] = useState<string | null>(null)
-  const [resultImage, setResultImage] = useState<string | null>(null)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  // ============================================================
+  // CURRENT IMAGE / ANALYSIS STATE
+  // ============================================================
 
-  const [droneId, setDroneId] = useState("DG-001")
+  const [selectedImage, setSelectedImage] =
+    useState<string | null>(null)
 
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [peopleCount, setPeopleCount] = useState<number | null>(null)
-  const [detections, setDetections] = useState<Detection[]>([])
-  const [error, setError] = useState<string | null>(null)
+  const [resultImage, setResultImage] =
+    useState<string | null>(null)
 
-  const [history, setHistory] = useState<DetectionHistory[]>([])
+  const [selectedFile, setSelectedFile] =
+    useState<File | null>(null)
+
+  // ============================================================
+  // LOCATION
+  // ============================================================
+
+  const [latitude, setLatitude] =
+    useState<number | null>(null)
+
+  const [longitude, setLongitude] =
+    useState<number | null>(null)
+
+  const [location, setLocation] =
+    useState<string | null>(null)
+
+  // ============================================================
+  // DRONE / ANALYSIS
+  // ============================================================
+
+  const [droneId, setDroneId] =
+    useState("DG-001")
+
+  const [isAnalyzing, setIsAnalyzing] =
+    useState(false)
+
+  const [peopleCount, setPeopleCount] =
+    useState<number | null>(null)
+
+  const [detections, setDetections] =
+    useState<Detection[]>([])
+
+  const [error, setError] =
+    useState<string | null>(null)
+
+  // ============================================================
+  // HISTORY
+  // ============================================================
+
+  const [history, setHistory] =
+    useState<DetectionHistory[]>([])
+
+  const [selectedHistoryItem, setSelectedHistoryItem] =
+    useState<DetectionHistory | null>(null)
 
   // ============================================================
   // LOAD DETECTION HISTORY
@@ -50,10 +97,13 @@ export default function DronePage() {
 
   useEffect(() => {
     try {
-      const savedHistory = localStorage.getItem(HISTORY_KEY)
+      const savedHistory =
+        localStorage.getItem(HISTORY_KEY)
 
       if (savedHistory) {
-        setHistory(JSON.parse(savedHistory))
+        setHistory(
+          JSON.parse(savedHistory)
+        )
       }
     } catch (error) {
       console.error(
@@ -64,19 +114,56 @@ export default function DronePage() {
   }, [])
 
   // ============================================================
+  // DETECT BROWSER LOCATION
+  // ============================================================
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setLocation(
+        "Location unavailable"
+      )
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat =
+          position.coords.latitude
+
+        const lon =
+          position.coords.longitude
+
+        setLatitude(lat)
+        setLongitude(lon)
+
+        setLocation(
+          `Lat ${lat.toFixed(6)}, Lon ${lon.toFixed(6)}`
+        )
+      },
+      () => {
+        setLocation(
+          "Location unavailable"
+        )
+      }
+    )
+  }, [])
+
+  // ============================================================
   // SELECT IMAGE
   // ============================================================
 
   const handleFileChange = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    const file = event.target.files?.[0]
+    const file =
+      event.target.files?.[0]
 
     if (!file) return
 
     setSelectedFile(file)
 
-    const objectUrl = URL.createObjectURL(file)
+    const objectUrl =
+      URL.createObjectURL(file)
 
     setSelectedImage(objectUrl)
     setResultImage(null)
@@ -92,12 +179,16 @@ export default function DronePage() {
 
   const handleAnalyze = async () => {
     if (!selectedFile) {
-      setError("Please select a drone image first.")
+      setError(
+        "Please select a drone image first."
+      )
       return
     }
 
     if (!droneId.trim()) {
-      setError("Please enter a drone ID.")
+      setError(
+        "Please enter a drone ID."
+      )
       return
     }
 
@@ -105,31 +196,70 @@ export default function DronePage() {
     setError(null)
 
     try {
-      const formData = new FormData()
+      // ========================================================
+      // FORM DATA
+      // ========================================================
+
+      const formData =
+        new FormData()
 
       formData.append(
         "file",
         selectedFile
       )
 
-      const response = await fetch(
-        "http://127.0.0.1:8000/predict",
-        {
-          method: "POST",
-          body: formData,
-        }
-      )
-
-      if (!response.ok) {
-        const errorText = await response.text()
-
-        throw new Error(
-          errorText || "Drone analysis failed."
+      if (latitude !== null) {
+        formData.append(
+          "latitude",
+          String(latitude)
         )
       }
 
+      if (longitude !== null) {
+        formData.append(
+          "longitude",
+          String(longitude)
+        )
+      }
+
+      if (location) {
+        formData.append(
+          "location",
+          location
+        )
+      }
+
+      // ========================================================
+      // BACKEND REQUEST
+      // ========================================================
+
+      const response =
+        await fetch(
+          "http://127.0.0.1:8000/predict",
+          {
+            method: "POST",
+            body: formData,
+          }
+        )
+
+      if (!response.ok) {
+        const errorText =
+          await response.text()
+
+        throw new Error(
+          errorText ||
+            "Drone analysis failed."
+        )
+      }
+
+      // ========================================================
+      // CONTENT TYPE
+      // ========================================================
+
       const contentType =
-        response.headers.get("content-type")
+        response.headers.get(
+          "content-type"
+        )
 
       if (!contentType) {
         throw new Error(
@@ -151,13 +281,19 @@ export default function DronePage() {
       const boundary =
         boundaryMatch[1]
 
+      // ========================================================
+      // READ RESPONSE
+      // ========================================================
+
       const responseBuffer =
         await response.arrayBuffer()
 
       const responseText =
         new TextDecoder(
           "latin1"
-        ).decode(responseBuffer)
+        ).decode(
+          responseBuffer
+        )
 
       const delimiter =
         `--${boundary}`
@@ -176,6 +312,11 @@ export default function DronePage() {
         filename: string
         people_count: number
         detections: Detection[]
+        latitude?: number | null
+        longitude?: number | null
+        location?: string | null
+        model_name?: string
+        analysis_status?: string
       } | null = null
 
       for (const part of parts) {
@@ -254,40 +395,74 @@ export default function DronePage() {
             )
           : 0
 
-      const highestConfidence = metadata.detections.length > 0
-        ? Math.round(Math.max(...metadata.detections.map((detection) => detection.confidence)) * 100)
-        : 0
-
       // ========================================================
-      // SAVE TO DETECTION HISTORY
+      // CALCULATE HIGHEST CONFIDENCE
       // ========================================================
 
-      const newHistoryItem: DetectionHistory = {
-        id:
-          `${Date.now()}-${Math.random()
-            .toString(36)
-            .substring(2, 8)}`,
+      const highestConfidence =
+        metadata.detections.length > 0
+          ? Math.round(
+              Math.max(
+                ...metadata.detections.map(
+                  (detection) =>
+                    detection.confidence
+                )
+              ) * 100
+            )
+          : 0
 
-        droneId:
-          droneId.trim(),
+      // ========================================================
+      // SAVE DETECTION HISTORY
+      // ========================================================
 
-        filename:
-          selectedFile.name,
+      const newHistoryItem:
+        DetectionHistory = {
+          id:
+            `${Date.now()}-${Math.random()
+              .toString(36)
+              .substring(2, 8)}`,
 
-        peopleCount:
-          metadata.people_count,
+          droneId:
+            droneId.trim(),
 
-        averageConfidence:
-          averageConfidence,
+          filename:
+            selectedFile.name,
 
-        highestConfidence,
+          peopleCount:
+            metadata.people_count,
 
-        timestamp:
-          new Date().toISOString(),
+          averageConfidence:
+            averageConfidence,
 
-        status:
-          "Completed",
-      }
+          highestConfidence:
+            highestConfidence,
+
+          timestamp:
+            new Date().toISOString(),
+
+          status:
+            "Completed",
+
+          latitude:
+            metadata.latitude ??
+            latitude,
+
+          longitude:
+            metadata.longitude ??
+            longitude,
+
+          location:
+            metadata.location ??
+            location,
+
+          modelName:
+            metadata.model_name ||
+            "floodguard_person_v2.pt",
+
+          analysisStatus:
+            metadata.analysis_status ||
+            "COMPLETED",
+        }
 
       setHistory(
         (previousHistory) => {
@@ -329,7 +504,8 @@ export default function DronePage() {
       // JPEG START: FF D8
       for (
         let i = 0;
-        i < bytes.length - 1;
+        i <
+        bytes.length - 1;
         i++
       ) {
         if (
@@ -389,6 +565,7 @@ export default function DronePage() {
           imageUrl
         )
       }
+
     } catch (err) {
       console.error(
         "Drone analysis error:",
@@ -400,6 +577,7 @@ export default function DronePage() {
           ? err.message
           : "Something went wrong while analyzing the image."
       )
+
     } finally {
       setIsAnalyzing(false)
     }
@@ -427,9 +605,21 @@ export default function DronePage() {
         )
       : 0
 
-  const highestDetectionConfidence = detections.length > 0
-    ? Math.round(Math.max(...detections.map((detection) => detection.confidence)) * 100)
-    : 0
+  // ============================================================
+  // HIGHEST CURRENT CONFIDENCE
+  // ============================================================
+
+  const highestDetectionConfidence =
+    detections.length > 0
+      ? Math.round(
+          Math.max(
+            ...detections.map(
+              (detection) =>
+                detection.confidence
+            )
+          ) * 100
+        )
+      : 0
 
   // ============================================================
   // FORMAT DATE
@@ -461,15 +651,19 @@ export default function DronePage() {
 
       <div className="grid gap-5 xl:grid-cols-2">
 
-        {/* UPLOAD PANEL */}
+        {/* ==================================================
+            UPLOAD PANEL
+        ================================================== */}
 
         <Panel className="flex min-h-[360px] flex-col items-center justify-center p-6 text-center">
 
           <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-[#2563eb]">
+
             <Icon
               name="ScanLine"
               size={32}
             />
+
           </div>
 
           <h3 className="mt-5 text-2xl font-semibold text-[#0f2742]">
@@ -502,6 +696,23 @@ export default function DronePage() {
 
           </div>
 
+          {/* LOCATION */}
+
+          <div className="mt-3 w-full max-w-sm text-left text-sm">
+
+            <span className="text-slate-500">
+              Location:{" "}
+            </span>
+
+            <span className="font-medium text-[#0f2742]">
+              {location ||
+                "Detecting location..."}
+            </span>
+
+          </div>
+
+          {/* BUTTONS */}
+
           <div className="mt-4 flex w-full max-w-sm flex-col items-stretch gap-3 sm:flex-row">
 
             <label className="inline-flex flex-1 cursor-pointer items-center justify-center rounded-md bg-[#2563EB] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1D4ED8]">
@@ -527,6 +738,8 @@ export default function DronePage() {
             </button>
 
           </div>
+
+          {/* ANALYZE */}
 
           <button
             type="button"
@@ -555,7 +768,9 @@ export default function DronePage() {
         </Panel>
 
 
-        {/* RESULT PANEL */}
+        {/* ==================================================
+            RESULT PANEL
+        ================================================== */}
 
         <Panel className="p-5">
 
@@ -616,6 +831,8 @@ export default function DronePage() {
 
           <div className="mt-5 grid gap-3 sm:grid-cols-4">
 
+            {/* PEOPLE */}
+
             <div className="rounded-md border border-[#D6E2EE] bg-white p-3 text-center">
 
               <div className="text-2xl font-bold text-[#0f2742]">
@@ -629,13 +846,17 @@ export default function DronePage() {
             </div>
 
 
+            {/* PRIORITY */}
+
             <div className="rounded-lg border border-red-200 bg-[#FFF1F2] p-3 text-center">
 
               <div className="text-2xl font-bold text-[#C62828]">
+
                 {peopleCount !== null &&
                 peopleCount > 0
                   ? "HIGH"
                   : "—"}
+
               </div>
 
               <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-[#C62828]">
@@ -644,6 +865,8 @@ export default function DronePage() {
 
             </div>
 
+
+            {/* DETECTIONS */}
 
             <div className="rounded-lg border border-amber-200 bg-[#FFF7ED] p-3 text-center">
 
@@ -658,14 +881,19 @@ export default function DronePage() {
             </div>
 
 
+            {/* CONFIDENCE */}
+
             <div className="rounded-lg border border-blue-200 bg-[#EAF3F8] p-3 text-center">
 
               <div className="text-2xl font-bold text-[#1261A0]">
+
                 {peopleCount !== null
                   ? highestDetectionConfidence
                   : "—"}
+
                 {peopleCount !== null &&
                   "%"}
+
               </div>
 
               <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-[#1261A0]">
@@ -694,6 +922,8 @@ export default function DronePage() {
         />
 
         <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+
+          {/* CONFIDENCE */}
 
           <div className="rounded-lg border border-slate-200 bg-white p-4">
 
@@ -728,6 +958,8 @@ export default function DronePage() {
 
           </div>
 
+
+          {/* OPERATIONAL NOTE */}
 
           <div className="rounded-lg border border-slate-200 bg-white p-4">
 
@@ -805,7 +1037,7 @@ export default function DronePage() {
 
                     <div className="flex items-center gap-3">
 
-                      <div className="rounded-lg border border-sky-500/20 bg-sky-500/10 px-2.5 py-1 text-xs font-bold text-sky-200">
+                      <div className="rounded-lg border border-sky-500/20 bg-sky-500/10 px-2.5 py-1 text-xs font-bold text-[#1261A0]">
                         {item.droneId}
                       </div>
 
@@ -835,6 +1067,8 @@ export default function DronePage() {
 
                   <div className="grid grid-cols-3 gap-3 lg:min-w-[420px]">
 
+                    {/* PEOPLE */}
+
                     <div className="rounded-md border border-[#D6E2EE] bg-white p-3 text-center">
 
                       <div className="text-lg font-bold text-[#0f2742]">
@@ -848,10 +1082,14 @@ export default function DronePage() {
                     </div>
 
 
+                    {/* CONFIDENCE */}
+
                     <div className="rounded-md border border-[#D6E2EE] bg-white p-3 text-center">
 
                       <div className="text-lg font-bold text-[#1261A0]">
-                        {item.highestConfidence ?? item.averageConfidence}%
+                        {item.highestConfidence ??
+                          item.averageConfidence}
+                        %
                       </div>
 
                       <div className="text-[9px] font-medium uppercase tracking-[0.12em] text-slate-500">
@@ -861,17 +1099,39 @@ export default function DronePage() {
                     </div>
 
 
-                    <div className="rounded-md border border-[#D6E2EE] bg-white p-3 text-center">
+                    {/* REVIEW */}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (
+                          item.peopleCount >
+                          0
+                        ) {
+                          setSelectedHistoryItem(
+                            item
+                          )
+                        }
+                      }}
+                      disabled={
+                        item.peopleCount ===
+                        0
+                      }
+                      className="rounded-md border border-[#D6E2EE] bg-white p-3 text-center transition hover:border-[#18864B] hover:bg-[#F0FDF4] disabled:cursor-default disabled:hover:border-[#D6E2EE] disabled:hover:bg-white"
+                    >
 
                       <div className="text-lg font-bold text-[#18864B]">
-                        {item.peopleCount > 0 ? "Review" : "Clear"}
+                        {item.peopleCount >
+                        0
+                          ? "Review"
+                          : "Clear"}
                       </div>
 
                       <div className="text-[9px] font-medium uppercase tracking-[0.12em] text-slate-500">
                         Response
                       </div>
 
-                    </div>
+                    </button>
 
                   </div>
 
@@ -885,6 +1145,285 @@ export default function DronePage() {
         )}
 
       </Panel>
+
+
+      {/* ==================================================
+          DETECTION REVIEW MODAL
+          NO IMAGE / IMAGE PATH
+      ================================================== */}
+
+      {selectedHistoryItem && (
+
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() =>
+            setSelectedHistoryItem(
+              null
+            )
+          }
+        >
+
+          <div
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-2xl"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+
+            {/* HEADER */}
+
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+
+              <div>
+
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#627D98]">
+                  Detection review
+                </div>
+
+                <h2 className="mt-1 text-xl font-semibold text-[#0f2742]">
+                  {selectedHistoryItem.filename}
+                </h2>
+
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedHistoryItem(
+                    null
+                  )
+                }
+                className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 text-xl text-slate-500 transition hover:bg-slate-100 hover:text-[#0f2742]"
+              >
+                ×
+              </button>
+
+            </div>
+
+
+            {/* CONTENT */}
+
+            <div className="space-y-4 p-6">
+
+              {/* DETECTION INFORMATION */}
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#627D98]">
+                  Detection information
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+
+                  {/* DRONE ID */}
+
+                  <div className="rounded-md border border-slate-200 bg-white p-3">
+
+                    <div className="text-[9px] uppercase tracking-[0.12em] text-slate-500">
+                      Drone ID
+                    </div>
+
+                    <div className="mt-1 text-sm font-semibold text-[#0f2742]">
+                      {selectedHistoryItem.droneId}
+                    </div>
+
+                  </div>
+
+
+                  {/* STATUS */}
+
+                  <div className="rounded-md border border-slate-200 bg-white p-3">
+
+                    <div className="text-[9px] uppercase tracking-[0.12em] text-slate-500">
+                      Status
+                    </div>
+
+                    <div className="mt-1 text-sm font-semibold text-[#18864B]">
+                      {selectedHistoryItem.analysisStatus ||
+                        selectedHistoryItem.status}
+                    </div>
+
+                  </div>
+
+
+                  {/* PEOPLE */}
+
+                  <div className="rounded-md border border-slate-200 bg-white p-3">
+
+                    <div className="text-[9px] uppercase tracking-[0.12em] text-slate-500">
+                      People detected
+                    </div>
+
+                    <div className="mt-1 text-xl font-bold text-[#0f2742]">
+                      {selectedHistoryItem.peopleCount}
+                    </div>
+
+                  </div>
+
+
+                  {/* AVERAGE */}
+
+                  <div className="rounded-md border border-slate-200 bg-white p-3">
+
+                    <div className="text-[9px] uppercase tracking-[0.12em] text-slate-500">
+                      Average confidence
+                    </div>
+
+                    <div className="mt-1 text-xl font-bold text-[#1261A0]">
+                      {selectedHistoryItem.averageConfidence}%
+                    </div>
+
+                  </div>
+
+
+                  {/* HIGHEST */}
+
+                  <div className="rounded-md border border-slate-200 bg-white p-3">
+
+                    <div className="text-[9px] uppercase tracking-[0.12em] text-slate-500">
+                      Highest confidence
+                    </div>
+
+                    <div className="mt-1 text-xl font-bold text-[#1261A0]">
+                      {selectedHistoryItem.highestConfidence}%
+                    </div>
+
+                  </div>
+
+
+                  {/* MODEL */}
+
+                  <div className="rounded-md border border-slate-200 bg-white p-3">
+
+                    <div className="text-[9px] uppercase tracking-[0.12em] text-slate-500">
+                      Model
+                    </div>
+
+                    <div className="mt-1 break-all text-sm font-semibold text-[#0f2742]">
+                      {selectedHistoryItem.modelName ||
+                        "floodguard_person_v2.pt"}
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              {/* LOCATION */}
+
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#627D98]">
+                  Location
+                </div>
+
+                <div className="mt-3">
+
+                  <div className="text-sm font-medium text-[#0f2742]">
+                    {selectedHistoryItem.location ||
+                      "Location unavailable"}
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+
+                    {/* LATITUDE */}
+
+                    <div className="rounded-md border border-slate-200 p-3">
+
+                      <div className="text-[9px] uppercase tracking-[0.12em] text-slate-500">
+                        Latitude
+                      </div>
+
+                      <div className="mt-1 text-sm font-semibold text-[#0f2742]">
+
+                        {selectedHistoryItem.latitude !==
+                          null &&
+                        selectedHistoryItem.latitude !==
+                          undefined
+                          ? selectedHistoryItem.latitude.toFixed(
+                              6
+                            )
+                          : "—"}
+
+                      </div>
+
+                    </div>
+
+
+                    {/* LONGITUDE */}
+
+                    <div className="rounded-md border border-slate-200 p-3">
+
+                      <div className="text-[9px] uppercase tracking-[0.12em] text-slate-500">
+                        Longitude
+                      </div>
+
+                      <div className="mt-1 text-sm font-semibold text-[#0f2742]">
+
+                        {selectedHistoryItem.longitude !==
+                          null &&
+                        selectedHistoryItem.longitude !==
+                          undefined
+                          ? selectedHistoryItem.longitude.toFixed(
+                              6
+                            )
+                          : "—"}
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              {/* ANALYSIS TIME */}
+
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#627D98]">
+                  Analysis time
+                </div>
+
+                <div className="mt-2 text-sm font-medium text-[#0f2742]">
+                  {formatDate(
+                    selectedHistoryItem.timestamp
+                  )}
+                </div>
+
+              </div>
+
+            </div>
+
+
+            {/* FOOTER */}
+
+            <div className="flex justify-end border-t border-slate-200 px-6 py-4">
+
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedHistoryItem(
+                    null
+                  )
+                }
+                className="rounded-md bg-[#2563EB] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1D4ED8]"
+              >
+                Close
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
 
     </div>
   )
