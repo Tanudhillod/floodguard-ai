@@ -113,40 +113,70 @@ export default function DronePage() {
     }
   }, [])
 
+
   // ============================================================
-  // DETECT BROWSER LOCATION
+  // EXTRACT LOCATION FROM DRONE IMAGE FILENAME
   // ============================================================
 
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      setLocation(
-        "Location unavailable"
-      )
-      return
+  const extractLocationFromFilename = (
+    filename: string
+  ) => {
+    /*
+     * Expected filename:
+     * location_state_latitude_longitude_flood.jpg
+     *
+     * Example:
+     * supaul_bihar_26.1153_86.5951_flood.jpg
+     */
+
+    const stem = filename
+      .replace(/\.[^/.]+$/, "")
+      .trim()
+
+    const match = stem.match(
+      /^(.+?)_(-?\d+(?:\.\d+)?)_(-?\d+(?:\.\d+)?)_flood(?:_[^_]*)?$/i
+    )
+
+    if (!match) {
+      return null
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat =
-          position.coords.latitude
+    const locationPart = match[1]
 
-        const lon =
-          position.coords.longitude
-
-        setLatitude(lat)
-        setLongitude(lon)
-
-        setLocation(
-          `Lat ${lat.toFixed(6)}, Lon ${lon.toFixed(6)}`
-        )
-      },
-      () => {
-        setLocation(
-          "Location unavailable"
-        )
-      }
+    const parsedLatitude = Number(
+      match[2]
     )
-  }, [])
+
+    const parsedLongitude = Number(
+      match[3]
+    )
+
+    if (
+      !Number.isFinite(parsedLatitude) ||
+      !Number.isFinite(parsedLongitude) ||
+      parsedLatitude < -90 ||
+      parsedLatitude > 90 ||
+      parsedLongitude < -180 ||
+      parsedLongitude > 180
+    ) {
+      return null
+    }
+
+    const parsedLocation =
+      locationPart
+        .replace(/_/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .replace(/\b\w/g, (character) =>
+          character.toUpperCase()
+        )
+
+    return {
+      location: parsedLocation,
+      latitude: parsedLatitude,
+      longitude: parsedLongitude,
+    }
+  }
 
   // ============================================================
   // SELECT IMAGE
@@ -162,6 +192,31 @@ export default function DronePage() {
 
     setSelectedFile(file)
 
+    const filenameLocation =
+      extractLocationFromFilename(
+        file.name
+      )
+
+    if (!filenameLocation) {
+      setLatitude(null)
+      setLongitude(null)
+      setLocation(null)
+      setError(
+        "Invalid filename. Please use: location_state_latitude_longitude_flood.jpg"
+      )
+    } else {
+      setLatitude(
+        filenameLocation.latitude
+      )
+      setLongitude(
+        filenameLocation.longitude
+      )
+      setLocation(
+        filenameLocation.location
+      )
+      setError(null)
+    }
+
     const objectUrl =
       URL.createObjectURL(file)
 
@@ -170,7 +225,6 @@ export default function DronePage() {
 
     setPeopleCount(null)
     setDetections([])
-    setError(null)
   }
 
   // ============================================================
@@ -207,27 +261,6 @@ export default function DronePage() {
         "file",
         selectedFile
       )
-
-      if (latitude !== null) {
-        formData.append(
-          "latitude",
-          String(latitude)
-        )
-      }
-
-      if (longitude !== null) {
-        formData.append(
-          "longitude",
-          String(longitude)
-        )
-      }
-
-      if (location) {
-        formData.append(
-          "location",
-          location
-        )
-      }
 
       // ========================================================
       // BACKEND REQUEST
@@ -674,6 +707,11 @@ export default function DronePage() {
             Upload a drone image to run person detection for an active mission.
           </p>
 
+          <p className="mt-2 max-w-md text-xs text-slate-500">
+            Location is taken from the image filename:
+            location_state_latitude_longitude_flood.jpg
+          </p>
+
           {/* DRONE ID */}
 
           <div className="mt-4 w-full max-w-sm text-left">
@@ -701,13 +739,21 @@ export default function DronePage() {
           <div className="mt-3 w-full max-w-sm text-left text-sm">
 
             <span className="text-slate-500">
-              Location:{" "}
+              Image location:{" "}
             </span>
 
             <span className="font-medium text-[#0f2742]">
               {location ||
-                "Detecting location..."}
+                "Upload a correctly named drone image"}
             </span>
+
+            {latitude !== null &&
+              longitude !== null && (
+                <div className="mt-1 text-xs text-slate-500">
+                  {latitude.toFixed(6)},{" "}
+                  {longitude.toFixed(6)}
+                </div>
+              )}
 
           </div>
 

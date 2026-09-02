@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, Form
+from fastapi import FastAPI, File, UploadFile, HTTPException, Form, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
@@ -12,10 +12,12 @@ import time
 import urllib.request
 import urllib.error
 import urllib.parse
+import re
 
 from dotenv import load_dotenv
 
 from backend.services.detector import DroneDetector
+from backend.supabase_client import supabase
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 
@@ -60,7 +62,7 @@ app = FastAPI(
     ),
     version="2.1.0"
 )
-Base.metadata.create_all(bind=engine)
+#
 # ============================================================
 # FEATURE 1 / 3 / 4 REQUEST MODELS
 # ============================================================
@@ -142,16 +144,131 @@ def health():
 
 
 # ============================================================
+# EXTRACT LOCATION FROM DRONE IMAGE FILENAME
+# ============================================================
+
+def _extract_location_from_filename(filename: str):
+    """
+    Extract location metadata from the uploaded drone image filename.
+
+    Expected filename format:
+        location_state_latitude_longitude_flood.jpg
+
+    Examples:
+        supaul_bihar_26.1153_86.5951_flood.jpg
+        patna_bihar_25.1000_85.1000_flood.jpg
+        dibrugarh_assam_27.4845_94.9019_flood.jpg
+        malda_west_bengal_25.1372_88.0899_flood.jpg
+
+    The filename is now the source of truth for the drone image
+    location. Any live/browser location sent by the frontend is ignored.
+    """
+
+    if not filename:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "The uploaded image must have a location-based filename "
+                "in the format: location_state_latitude_longitude_flood.jpg"
+            )
+        )
+
+    safe_filename = os.path.basename(filename)
+
+    # Remove the extension before parsing.
+    stem = os.path.splitext(safe_filename)[0].strip()
+
+    # Match the latitude and longitude from the end of the filename.
+    # This also allows negative coordinates.
+    pattern = re.compile(
+        r"^(?P<location>.+?)_"
+        r"(?P<latitude>-?\d+(?:\.\d+)?)_"
+        r"(?P<longitude>-?\d+(?:\.\d+)?)_"
+        r"flood(?:_[^_]*)?$",
+        re.IGNORECASE
+    )
+
+    match = pattern.match(stem)
+
+    if not match:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Invalid drone image filename. Expected format: "
+                "location_state_latitude_longitude_flood.jpg"
+            )
+        )
+
+    location_part = match.group("location")
+
+    try:
+        parsed_latitude = float(
+            match.group("latitude")
+        )
+        parsed_longitude = float(
+            match.group("longitude")
+        )
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Latitude or longitude in the filename is invalid."
+        )
+
+    if not -90 <= parsed_latitude <= 90:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid latitude in filename: {parsed_latitude}"
+        )
+
+    if not -180 <= parsed_longitude <= 180:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid longitude in filename: {parsed_longitude}"
+        )
+
+    # Convert the machine-readable filename part into a human-readable
+    # location label while preserving the original filename separately.
+    location_name = location_part.replace("_", " ").strip()
+    location_name = " ".join(location_name.split()).title()
+
+    return {
+        "location": location_name,
+        "latitude": parsed_latitude,
+        "longitude": parsed_longitude,
+        "location_part": location_part,
+        "source": "filename"
+    }
+
+
+# ============================================================
 # DRONE PREDICTION
 # ============================================================
 
 @app.post("/predict")
 async def predict(
     file: UploadFile = File(...),
+    # These fields are kept for frontend backward compatibility.
+    # They are intentionally NOT used for the drone location anymore.
     latitude: Optional[float] = Form(None),
     longitude: Optional[float] = Form(None),
     location: Optional[str] = Form(None)
 ):
+
+    # --------------------------------------------------------
+    # LOCATION SOURCE
+    # --------------------------------------------------------
+    # IMPORTANT:
+    # The drone image filename is now the source of truth.
+    # Any live/browser GPS values sent by the frontend are ignored.
+    # --------------------------------------------------------
+
+    filename_metadata = _extract_location_from_filename(
+        file.filename
+    )
+
+    image_latitude = filename_metadata["latitude"]
+    image_longitude = filename_metadata["longitude"]
+    image_location = filename_metadata["location"]
 
     # --------------------------------------------------------
     # Validate image
@@ -366,13 +483,16 @@ async def predict(
                 processed_image_path,
 
             "location":
-                location,
+                image_location,
 
             "latitude":
-                latitude,
+                image_latitude,
 
             "longitude":
-                longitude,
+                image_longitude,
+
+            "location_source":
+                "filename",
 
             # Current detector does not calculate
             # analysis duration.
@@ -462,13 +582,16 @@ async def predict(
 
         # New Supabase-related information
         "latitude":
-            latitude,
+            image_latitude,
 
         "longitude":
-            longitude,
+            image_longitude,
 
         "location":
-            location,
+            image_location,
+
+        "location_source":
+            "filename",
 
         "image_path":
             processed_image_path,
@@ -578,21 +701,14 @@ async def flood_risk(request: FloodRiskRequest):
 # ============================================================
 
 @app.post("/sos")
-async def analyze_sos(
-    request: SOSRequest,
-    db: Session = Depends(get_db)
-):
+async def analyze_sos(request: SOSRequest):
 
     try:
-
         # ========================================================
         # FEATURE 3 — SOS INTELLIGENCE
         # ========================================================
 
-        result = extract_sos_llm(
-            request.message
-        )
-
+        result = extract_sos_llm(request.message)
 
         # ========================================================
         # FEATURE 4 — PRIORITY INTELLIGENCE
@@ -604,53 +720,55 @@ async def analyze_sos(
             flood_severity=0.0
         )
 
-
-        # Add Feature 4 result to the extracted data
         result["priority"] = priority_result
 
-
         # ========================================================
-        # SAVE SOS TO DATABASE
+        # SAVE SOS TO SUPABASE
+        # ========================================================
+        # This project uses Supabase for persistence. The previous
+        # version of this endpoint referenced SQLAlchemy objects
+        # (Session, get_db, SOSRequestModel) that are not defined
+        # in this application.
         # ========================================================
 
-        sos_record = SOSRequestModel(
-            original_message=request.message,
-            extracted_data=json.dumps(result),
-            status="Pending"
+        sos_record = {
+            "original_message": request.message,
+            "extracted_data": json.dumps(result),
+            "status": "Pending"
+        }
+
+        db_response = (
+            supabase
+            .table("sos_requests")
+            .insert(sos_record)
+            .execute()
         )
 
-        db.add(sos_record)
-        db.commit()
-        db.refresh(sos_record)
+        inserted_rows = getattr(db_response, "data", None) or []
 
+        if not inserted_rows:
+            raise Exception("Supabase did not return the inserted SOS record.")
 
-        # ========================================================
-        # RETURN RESULT
-        # ========================================================
+        saved_record = inserted_rows[0]
 
         return {
-            "id": sos_record.id,
-            "created_at": sos_record.created_at,
-            "status": sos_record.status,
-            "original_message": sos_record.original_message,
+            "id": saved_record.get("id"),
+            "created_at": saved_record.get("created_at"),
+            "status": saved_record.get("status", "Pending"),
+            "original_message": saved_record.get(
+                "original_message",
+                request.message
+            ),
             "extracted_data": result
         }
 
-
     except ValueError as e:
-
-        db.rollback()
-
         raise HTTPException(
             status_code=400,
             detail=str(e)
         )
 
-
     except Exception as e:
-
-        db.rollback()
-
         raise HTTPException(
             status_code=500,
             detail=f"SOS analysis failed: {str(e)}"
@@ -662,42 +780,61 @@ async def analyze_sos(
 # ============================================================
 
 @app.get("/sos")
-def get_sos_requests(
-    db: Session = Depends(get_db)
-):
+def get_sos_requests():
 
-    requests = (
-        db.query(SOSRequestModel)
-        .order_by(
-            SOSRequestModel.created_at.desc()
+    try:
+        response = (
+            supabase
+            .table("sos_requests")
+            .select("*")
+            .order("created_at", desc=True)
+            .execute()
         )
-        .all()
-    )
 
-    result = []
+        requests = getattr(response, "data", None) or []
 
-    for request in requests:
+        result = []
 
-        try:
-            extracted_data = json.loads(
-                request.extracted_data
+        for request in requests:
+            raw_extracted_data = request.get(
+                "extracted_data",
+                {}
             )
-        except Exception:
-            extracted_data = {}
 
-        result.append({
-            "id": request.id,
-            "created_at": request.created_at,
-            "status": request.status,
-            "original_message": request.original_message,
-            "extracted_data": extracted_data
-        })
+            if isinstance(raw_extracted_data, str):
+                try:
+                    extracted_data = json.loads(
+                        raw_extracted_data
+                    )
+                except Exception:
+                    extracted_data = {}
+            elif isinstance(raw_extracted_data, dict):
+                extracted_data = raw_extracted_data
+            else:
+                extracted_data = {}
 
-    return {
-        "requests": result
-    }
-    
-    # ============================================================
+            result.append({
+                "id": request.get("id"),
+                "created_at": request.get("created_at"),
+                "status": request.get("status"),
+                "original_message": request.get(
+                    "original_message"
+                ),
+                "extracted_data": extracted_data
+            })
+
+        return {
+            "requests": result
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Could not fetch SOS requests: {str(e)}"
+        )
+
+
+# ============================================================
 # FEATURE 4 — MULTI-MODAL PRIORITY
 # ============================================================
 
