@@ -46,8 +46,11 @@ export default function DronePage() {
   const [resultImage, setResultImage] =
     useState<string | null>(null)
 
-  const [selectedFile, setSelectedFile] =
-    useState<File | null>(null)
+  const [selectedFiles, setSelectedFiles] =
+    useState<File[]>([])
+
+  const [batchProgress, setBatchProgress] =
+    useState({ current: 0, total: 0 })
 
   // ============================================================
   // LOCATION
@@ -179,440 +182,212 @@ export default function DronePage() {
   }
 
   // ============================================================
-  // SELECT IMAGE
+  // SELECT MULTIPLE IMAGES
   // ============================================================
 
   const handleFileChange = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    const file =
-      event.target.files?.[0]
+    const files = Array.from(event.target.files || [])
+    if (!files.length) return
 
-    if (!file) return
+    const validFiles: File[] = []
+    const invalidFiles: string[] = []
 
-    setSelectedFile(file)
+    for (const file of files) {
+      if (extractLocationFromFilename(file.name)) validFiles.push(file)
+      else invalidFiles.push(file.name)
+    }
 
-    const filenameLocation =
-      extractLocationFromFilename(
-        file.name
-      )
+    setSelectedFiles((previous) => [...previous, ...validFiles])
 
-    if (!filenameLocation) {
-      setLatitude(null)
-      setLongitude(null)
-      setLocation(null)
-      setError(
-        "Invalid filename. Please use: location_state_latitude_longitude_flood.jpg"
-      )
-    } else {
-      setLatitude(
-        filenameLocation.latitude
-      )
-      setLongitude(
-        filenameLocation.longitude
-      )
-      setLocation(
-        filenameLocation.location
-      )
+    if (validFiles.length > 0) {
+      const firstFile = validFiles[0]
+      const firstLocation = extractLocationFromFilename(firstFile.name)
+      setSelectedImage(URL.createObjectURL(firstFile))
+      setResultImage(null)
+      setPeopleCount(null)
+      setDetections([])
+      setLatitude(firstLocation?.latitude ?? null)
+      setLongitude(firstLocation?.longitude ?? null)
+      setLocation(firstLocation?.location ?? null)
       setError(null)
     }
 
-    const objectUrl =
-      URL.createObjectURL(file)
+    if (invalidFiles.length > 0) {
+      setError(
+        `${invalidFiles.length} image${invalidFiles.length > 1 ? "s" : ""} skipped. Use: location_state_latitude_longitude_flood.jpg`
+      )
+    }
 
-    setSelectedImage(objectUrl)
-    setResultImage(null)
-
-    setPeopleCount(null)
-    setDetections([])
+    event.target.value = ""
   }
 
   // ============================================================
-  // ANALYZE IMAGE
+  // ANALYZE ALL SELECTED IMAGES
   // ============================================================
 
   const handleAnalyze = async () => {
-    if (!selectedFile) {
-      setError(
-        "Please select a drone image first."
-      )
+    if (!selectedFiles.length) {
+      setError("Please select at least one drone image first.")
       return
     }
 
     if (!droneId.trim()) {
-      setError(
-        "Please enter a drone ID."
-      )
+      setError("Please enter a drone ID.")
       return
     }
 
     setIsAnalyzing(true)
     setError(null)
+    setBatchProgress({ current: 0, total: selectedFiles.length })
 
-    try {
-      // ========================================================
-      // FORM DATA
-      // ========================================================
+    let successful = 0
+    let failed = 0
 
-      const formData =
-        new FormData()
+    // Sequential processing keeps CPU-based YOLO inference stable.
+    for (let index = 0; index < selectedFiles.length; index++) {
+      const file = selectedFiles[index]
+      setBatchProgress({ current: index + 1, total: selectedFiles.length })
 
-      formData.append(
-        "file",
-        selectedFile
-      )
+      try {
+        const formData = new FormData()
+        formData.append("file", file)
 
-      // ========================================================
-      // BACKEND REQUEST
-      // ========================================================
+        // IMPORTANT: existing endpoint and model are unchanged.
+        const response = await fetch("http://127.0.0.1:8000/predict", {
+          method: "POST",
+          body: formData,
+        })
 
-      const response =
-        await fetch(
-          "http://127.0.0.1:8000/predict",
-          {
-            method: "POST",
-            body: formData,
-          }
-        )
+        if (!response.ok) {
+          const errorText = await response.text()
+          throw new Error(errorText || "Drone analysis failed.")
+        }
 
-      if (!response.ok) {
-        const errorText =
-          await response.text()
+        const contentType = response.headers.get("content-type")
+        if (!contentType) throw new Error("Backend did not return a content type.")
 
-        throw new Error(
-          errorText ||
-            "Drone analysis failed."
-        )
-      }
+        const boundaryMatch = contentType.match(/boundary=([^;]+)/)
+        if (!boundaryMatch) throw new Error("Could not find multipart boundary in response.")
 
-      // ========================================================
-      // CONTENT TYPE
-      // ========================================================
+        const boundary = boundaryMatch[1]
+        const responseBuffer = await response.arrayBuffer()
+        const responseText = new TextDecoder("latin1").decode(responseBuffer)
+        const parts = responseText.split(`--${boundary}`)
 
-      const contentType =
-        response.headers.get(
-          "content-type"
-        )
+        let metadata: {
+          success: boolean
+          filename: string
+          people_count: number
+          detections: Detection[]
+          latitude?: number | null
+          longitude?: number | null
+          location?: string | null
+          model_name?: string
+          analysis_status?: string
+        } | null = null
 
-      if (!contentType) {
-        throw new Error(
-          "Backend did not return a content type."
-        )
-      }
-
-      const boundaryMatch =
-        contentType.match(
-          /boundary=([^;]+)/
-        )
-
-      if (!boundaryMatch) {
-        throw new Error(
-          "Could not find multipart boundary in response."
-        )
-      }
-
-      const boundary =
-        boundaryMatch[1]
-
-      // ========================================================
-      // READ RESPONSE
-      // ========================================================
-
-      const responseBuffer =
-        await response.arrayBuffer()
-
-      const responseText =
-        new TextDecoder(
-          "latin1"
-        ).decode(
-          responseBuffer
-        )
-
-      const delimiter =
-        `--${boundary}`
-
-      const parts =
-        responseText.split(
-          delimiter
-        )
-
-      // ========================================================
-      // READ METADATA
-      // ========================================================
-
-      let metadata: {
-        success: boolean
-        filename: string
-        people_count: number
-        detections: Detection[]
-        latitude?: number | null
-        longitude?: number | null
-        location?: string | null
-        model_name?: string
-        analysis_status?: string
-      } | null = null
-
-      for (const part of parts) {
-        if (
-          part.includes(
-            "application/json"
-          ) &&
-          part.includes(
-            "metadata"
-          )
-        ) {
-          const jsonStart =
-            part.indexOf(
-              "\r\n\r\n"
-            )
-
-          if (jsonStart !== -1) {
-            const jsonText =
-              part
-                .substring(
-                  jsonStart + 4
-                )
-                .trim()
-
-            try {
-              metadata =
-                JSON.parse(
-                  jsonText
-                )
-            } catch {
-              throw new Error(
-                "Could not parse detection metadata."
-              )
+        for (const part of parts) {
+          if (part.includes("application/json") && part.includes("metadata")) {
+            const jsonStart = part.indexOf("\r\n\r\n")
+            if (jsonStart !== -1) {
+              try {
+                metadata = JSON.parse(part.substring(jsonStart + 4).trim())
+              } catch {
+                throw new Error("Could not parse detection metadata.")
+              }
             }
           }
         }
-      }
 
-      if (!metadata) {
-        throw new Error(
-          "No detection metadata received from backend."
-        )
-      }
+        if (!metadata) throw new Error("No detection metadata received from backend.")
 
-      // ========================================================
-      // UPDATE CURRENT RESULT
-      // ========================================================
-
-      setPeopleCount(
-        metadata.people_count
-      )
-
-      setDetections(
-        metadata.detections
-      )
-
-      // ========================================================
-      // CALCULATE AVERAGE CONFIDENCE
-      // ========================================================
-
-      const averageConfidence =
-        metadata.detections.length > 0
+        const averageConfidence = metadata.detections.length > 0
           ? Math.round(
-              (
-                metadata.detections.reduce(
-                  (
-                    sum,
-                    detection
-                  ) =>
-                    sum +
-                    detection.confidence,
-                  0
-                ) /
-                  metadata.detections.length
-              ) * 100
+              (metadata.detections.reduce((sum, detection) => sum + detection.confidence, 0) /
+                metadata.detections.length) * 100
             )
           : 0
 
-      // ========================================================
-      // CALCULATE HIGHEST CONFIDENCE
-      // ========================================================
-
-      const highestConfidence =
-        metadata.detections.length > 0
+        const highestConfidence = metadata.detections.length > 0
           ? Math.round(
-              Math.max(
-                ...metadata.detections.map(
-                  (detection) =>
-                    detection.confidence
-                )
-              ) * 100
+              Math.max(...metadata.detections.map((detection) => detection.confidence)) * 100
             )
           : 0
 
-      // ========================================================
-      // SAVE DETECTION HISTORY
-      // ========================================================
-
-      const newHistoryItem:
-        DetectionHistory = {
-          id:
-            `${Date.now()}-${Math.random()
-              .toString(36)
-              .substring(2, 8)}`,
-
-          droneId:
-            droneId.trim(),
-
-          filename:
-            selectedFile.name,
-
-          peopleCount:
-            metadata.people_count,
-
-          averageConfidence:
-            averageConfidence,
-
-          highestConfidence:
-            highestConfidence,
-
-          timestamp:
-            new Date().toISOString(),
-
-          status:
-            "Completed",
-
-          latitude:
-            metadata.latitude ??
-            latitude,
-
-          longitude:
-            metadata.longitude ??
-            longitude,
-
-          location:
-            metadata.location ??
-            location,
-
-          modelName:
-            metadata.model_name ||
-            "floodguard_person_v2.pt",
-
-          analysisStatus:
-            metadata.analysis_status ||
-            "COMPLETED",
+        const newHistoryItem: DetectionHistory = {
+          id: `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+          droneId: droneId.trim(),
+          filename: file.name,
+          peopleCount: metadata.people_count,
+          averageConfidence,
+          highestConfidence,
+          timestamp: new Date().toISOString(),
+          status: "Completed",
+          latitude: metadata.latitude ?? null,
+          longitude: metadata.longitude ?? null,
+          location: metadata.location ?? null,
+          modelName: metadata.model_name || "floodguard_person_v2.pt",
+          analysisStatus: metadata.analysis_status || "COMPLETED",
         }
 
-      setHistory(
-        (previousHistory) => {
-          const updatedHistory = [
-            newHistoryItem,
-            ...previousHistory,
-          ]
+        setHistory((previousHistory) => {
+          const updatedHistory = [newHistoryItem, ...previousHistory].slice(0, 20)
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(updatedHistory))
+          return updatedHistory
+        })
 
-          // Keep latest 20 detections
-          const limitedHistory =
-            updatedHistory.slice(
-              0,
-              20
-            )
+        setPeopleCount(metadata.people_count)
+        setDetections(metadata.detections)
+        setLatitude(metadata.latitude ?? null)
+        setLongitude(metadata.longitude ?? null)
+        setLocation(metadata.location ?? null)
 
-          localStorage.setItem(
-            HISTORY_KEY,
-            JSON.stringify(
-              limitedHistory
-            )
-          )
+        const bytes = new Uint8Array(responseBuffer)
+        let jpegStart = -1
+        let jpegEnd = -1
 
-          return limitedHistory
-        }
-      )
-
-      // ========================================================
-      // EXTRACT ANNOTATED IMAGE
-      // ========================================================
-
-      const bytes =
-        new Uint8Array(
-          responseBuffer
-        )
-
-      let jpegStart = -1
-      let jpegEnd = -1
-
-      // JPEG START: FF D8
-      for (
-        let i = 0;
-        i <
-        bytes.length - 1;
-        i++
-      ) {
-        if (
-          bytes[i] === 0xff &&
-          bytes[i + 1] === 0xd8
-        ) {
-          jpegStart = i
-          break
-        }
-      }
-
-      // JPEG END: FF D9
-      if (jpegStart !== -1) {
-        for (
-          let i =
-            jpegStart + 2;
-          i <
-            bytes.length - 1;
-          i++
-        ) {
-          if (
-            bytes[i] === 0xff &&
-            bytes[i + 1] === 0xd9
-          ) {
-            jpegEnd =
-              i + 2
+        for (let i = 0; i < bytes.length - 1; i++) {
+          if (bytes[i] === 0xff && bytes[i + 1] === 0xd8) {
+            jpegStart = i
             break
           }
         }
-      }
 
-      if (
-        jpegStart !== -1 &&
-        jpegEnd !== -1
-      ) {
-        const imageBytes =
-          bytes.slice(
-            jpegStart,
-            jpegEnd
-          )
-
-        const blob =
-          new Blob(
-            [imageBytes],
-            {
-              type:
-                "image/jpeg",
+        if (jpegStart !== -1) {
+          for (let i = jpegStart + 2; i < bytes.length - 1; i++) {
+            if (bytes[i] === 0xff && bytes[i + 1] === 0xd9) {
+              jpegEnd = i + 2
+              break
             }
-          )
+          }
+        }
 
-        const imageUrl =
-          URL.createObjectURL(
-            blob
-          )
+        if (jpegStart !== -1 && jpegEnd !== -1) {
+          const imageBytes = bytes.slice(jpegStart, jpegEnd)
+          const blob = new Blob([imageBytes], { type: "image/jpeg" })
+          const imageUrl = URL.createObjectURL(blob)
+          setResultImage((previous) => {
+            if (previous) URL.revokeObjectURL(previous)
+            return imageUrl
+          })
+        }
 
-        setResultImage(
-          imageUrl
-        )
+        successful++
+      } catch (err) {
+        failed++
+        console.error(`Drone analysis error for ${file.name}:`, err)
       }
+    }
 
-    } catch (err) {
-      console.error(
-        "Drone analysis error:",
-        err
-      )
+    setIsAnalyzing(false)
+    setBatchProgress({ current: 0, total: 0 })
 
+    if (failed > 0) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Something went wrong while analyzing the image."
+        `${successful} image${successful === 1 ? "" : "s"} analyzed successfully. ${failed} failed.`
       )
-
-    } finally {
-      setIsAnalyzing(false)
     }
   }
 
@@ -704,7 +479,7 @@ export default function DronePage() {
           </h3>
 
           <p className="mt-2 max-w-md text-sm text-[#486581]">
-            Upload a drone image to run person detection for an active mission.
+            Upload multiple drone images to run person detection for an active mission.
           </p>
 
           <p className="mt-2 max-w-md text-xs text-slate-500">
@@ -757,6 +532,30 @@ export default function DronePage() {
 
           </div>
 
+          {selectedFiles.length > 0 && (
+            <div className="mt-4 w-full max-w-sm rounded-lg border border-[#D9E2EC] bg-[#F8FAFC] p-3 text-left">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#627D98]">
+                  Mission image queue
+                </span>
+                <span className="text-[10px] font-semibold text-[#2563EB]">
+                  {selectedFiles.length} image{selectedFiles.length > 1 ? "s" : ""}
+                </span>
+              </div>
+              <div className="mt-2 max-h-28 space-y-1 overflow-y-auto">
+                {selectedFiles.map((file, index) => {
+                  const parsed = extractLocationFromFilename(file.name)
+                  return (
+                    <div key={`${file.name}-${index}`} className="rounded-md bg-white px-2.5 py-2">
+                      <div className="truncate text-[10px] font-medium text-[#163A63]">{file.name}</div>
+                      <div className="truncate text-[9px] text-[#829AB1]">{parsed?.location || "Invalid filename"}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* BUTTONS */}
 
           <div className="mt-4 flex w-full max-w-sm flex-col items-stretch gap-3 sm:flex-row">
@@ -768,6 +567,7 @@ export default function DronePage() {
               <input
                 type="file"
                 accept="image/*"
+                multiple
                 className="hidden"
                 onChange={
                   handleFileChange
@@ -794,16 +594,37 @@ export default function DronePage() {
             }
             disabled={
               isAnalyzing ||
-              !selectedFile
+              selectedFiles.length === 0
             }
             className="mt-5 inline-flex items-center gap-2 rounded-md bg-[#2563eb] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-50"
           >
 
             {isAnalyzing
-              ? "Running analysis..."
-              : "Analyze Image"}
+              ? `Analyzing ${batchProgress.current} / ${batchProgress.total}`
+              : selectedFiles.length > 1
+                ? `Analyze ${selectedFiles.length} Images`
+                : "Analyze Image"}
 
           </button>
+
+          {selectedFiles.length > 0 && !isAnalyzing && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedFiles([])
+                setSelectedImage(null)
+                setResultImage(null)
+                setPeopleCount(null)
+                setDetections([])
+                setLatitude(null)
+                setLongitude(null)
+                setLocation(null)
+              }}
+              className="mt-2 text-xs font-medium text-[#627D98] hover:text-red-600"
+            >
+              Clear image queue
+            </button>
+          )}
 
           {error && (
             <div className="mt-4 max-w-sm rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
