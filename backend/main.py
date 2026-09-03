@@ -106,13 +106,28 @@ app.add_middleware(
 
 MODEL_PATH = "backend/models/floodguard_person_v2.pt"
 
+# Detection configuration
+# 0.50 removes very weak false-positive predictions while
+# keeping reasonably confident person detections.
+DETECTION_CONFIDENCE = 0.50
+
 detector = DroneDetector(
     model_path=MODEL_PATH,
     tile_size=512,
     overlap=0.25,
-    conf_threshold=0.10,
+    conf_threshold=DETECTION_CONFIDENCE,
     nms_iou=0.45
 )
+
+print("=" * 60)
+print("FloodGuard AI detector configuration")
+print("=" * 60)
+print(f"Model: {MODEL_PATH}")
+print(f"Confidence threshold: {DETECTION_CONFIDENCE}")
+print("Tile size: 512")
+print("Overlap: 0.25")
+print("NMS IoU: 0.45")
+print("=" * 60)
 
 
 # ============================================================
