@@ -63,7 +63,7 @@ const SENSOR_META: Record<SensorKey, { title: string; unit: string }> = {
 }
 
 export default function Dashboard() {
-  const [currentTime, setCurrentTime] = useState(new Date())
+  const [currentTime, setCurrentTime] = useState<Date | null>(null)
   const [selectedSensor, setSelectedSensor] = useState<SensorKey>("waterLevel")
 
   // Replace this object with your existing Model 1 API/Supabase state.
@@ -74,6 +74,7 @@ export default function Dashboard() {
   })
 
   useEffect(() => {
+    setCurrentTime(new Date())
     const timer = window.setInterval(() => setCurrentTime(new Date()), 1000)
     return () => window.clearInterval(timer)
   }, [])
@@ -105,7 +106,7 @@ export default function Dashboard() {
 
   return (
     <main className="min-h-screen bg-[#eef4f8] text-slate-800">
-      <div className="mx-auto w-full max-w-[1500px] px-4 py-5 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-375 px-4 py-5 sm:px-6 lg:px-8">
 
         {/* PAGE TITLE */}
         <section className="mb-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -152,16 +153,16 @@ export default function Dashboard() {
               </button>
             </div>
 
-            <div className="relative h-[390px] overflow-hidden rounded-lg border border-slate-200 bg-[#e6eef5]">
+            <div className="relative h-97.5 overflow-hidden rounded-lg border border-slate-200 bg-[#e6eef5]">
 
               {/* map background */}
               <div className="absolute inset-0">
                 <div className="absolute left-[14%] top-0 h-full w-px rotate-[4deg] bg-slate-300/50" />
-                <div className="absolute left-[31%] top-0 h-full w-px rotate-[18deg] bg-slate-300/40" />
-                <div className="absolute left-[51%] top-0 h-full w-[18px] -skew-x-[10deg] bg-blue-400/40" />
-                <div className="absolute left-[72%] top-0 h-full w-px -rotate-[12deg] bg-slate-300/40" />
-                <div className="absolute left-0 top-[27%] h-px w-full rotate-[3deg] bg-slate-300/35" />
-                <div className="absolute left-0 top-[58%] h-px w-full -rotate-[5deg] bg-slate-300/35" />
+                <div className="absolute left-[31%] top-0 h-full w-px rotate-18 bg-slate-300/40" />
+                <div className="absolute left-[51%] top-0 h-full w-4.5 skew-x-[-10deg] bg-blue-400/40" />
+                <div className="absolute left-[72%] top-0 h-full w-px -rotate-12 bg-slate-300/40" />
+                <div className="absolute left-0 top-[27%] h-px w-full rotate-3 bg-slate-300/35" />
+                <div className="absolute left-0 top-[58%] h-px w-full rotate-[-5deg] bg-slate-300/35" />
               </div>
 
               {/* heat zones */}
@@ -206,7 +207,7 @@ export default function Dashboard() {
             </div>
 
             <div className="flex justify-center py-7">
-              <div className={`flex h-40 w-40 flex-col items-center justify-center rounded-full border-[10px] border-slate-200 bg-orange-50 ${riskColor}`}>
+              <div className={`flex h-40 w-40 flex-col items-center justify-center rounded-full border-10 border-slate-200 bg-orange-50 ${riskColor}`}>
                 <div className="text-4xl font-bold leading-none">
                   {floodRiskData.probability}%
                 </div>
@@ -236,7 +237,7 @@ export default function Dashboard() {
               <InfoRow label="Model" value="Model 1" />
               <InfoRow
                 label="Last prediction"
-                value={currentTime.toLocaleTimeString("en-IN")}
+                value={currentTime?.toLocaleTimeString("en-IN") ?? "--:--:--"}
               />
             </div>
 
@@ -294,7 +295,7 @@ export default function Dashboard() {
             </select>
           </div>
 
-          <div className="mt-4 h-[310px] w-full min-w-0">
+          <div className="mt-4 h-77.5 w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={SENSOR_HISTORY} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -326,7 +327,7 @@ export default function Dashboard() {
             </span>
             <span className="inline-flex items-center gap-1">
               <Radio className="h-3 w-3 text-green-600" />
-              Updated {currentTime.toLocaleTimeString("en-IN")}
+              Updated {currentTime?.toLocaleTimeString("en-IN") ?? "--:--:--"}
             </span>
           </div>
         </section>
@@ -377,7 +378,7 @@ function SensorCard({
 }) {
   return (
     <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex min-h-[38px] items-start justify-between gap-2">
+      <div className="flex min-h-9.5 items-start justify-between gap-2">
         <div className="min-w-0 text-xs font-medium leading-4 text-slate-500">{title}</div>
         <span className={`shrink-0 rounded px-2 py-1 text-[8px] font-bold ${statusClass}`}>{status}</span>
       </div>
@@ -478,7 +479,7 @@ function MapPoint({
     <div className="absolute" style={{ left, top }}>
       <div className="relative">
         <div className="h-3 w-3 rounded-full border-2 border-white bg-red-600 shadow-sm" />
-        <div className="absolute left-4 top-[-5px] whitespace-nowrap rounded bg-white px-2 py-1 text-[9px] font-semibold text-slate-600 shadow-sm">
+        <div className="absolute left-4 -top-1.25 whitespace-nowrap rounded bg-white px-2 py-1 text-[9px] font-semibold text-slate-600 shadow-sm">
           {label}
         </div>
       </div>
