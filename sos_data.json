@@ -582,5 +582,71 @@
         ]
       }
     }
+  },
+  {
+    "id": 10,
+    "created_at": "2026-09-04T13:12:35Z",
+    "status": "Pending",
+    "original_message": "1 person need help. Needs: RESCUE, MEDICAL, FOOD. Location: 28.66751, 77.37508. Situation: trapped with 10 people at kaushambi",
+    "extracted_data": {
+      "source_type": "INDIVIDUAL_SOS",
+      "location": {
+        "text": "28.66751, 77.37508",
+        "latitude": 28.66751,
+        "longitude": 77.37508
+      },
+      "people": {
+        "total": "1",
+        "children": null,
+        "elderly": null,
+        "pregnant": null,
+        "injured": null,
+        "missing": null,
+        "deceased": null,
+        "mobility_impaired": null
+      },
+      "situation": "1 person is trapped with 10 people at Kaushambi.",
+      "request": {
+        "type": "RESCUE",
+        "resources": [
+          "RESCUE",
+          "MEDICAL",
+          "FOOD"
+        ]
+      },
+      "needs": {
+        "food": true,
+        "water": false,
+        "medicine": true,
+        "shelter": false,
+        "rescue": true,
+        "medical_transfer": false
+      },
+      "contact_info": [],
+      "original_message": "1 person need help. Needs: RESCUE, MEDICAL, FOOD. Location: 28.66751, 77.37508. Situation: trapped with 10 people at kaushambi",
+      "priority": {
+        "priority": "LOW",
+        "priority_score": 28,
+        "score_breakdown": {
+          "people_score": 5,
+          "vulnerability_score": 0,
+          "needs_score": 12,
+          "request_score": 6,
+          "flood_score": 0,
+          "location_score": 5
+        },
+        "inputs": {
+          "sos_people": 1,
+          "feature2_people": null,
+          "effective_people": 1,
+          "flood_severity": 0.0
+        },
+        "recommended_actions": [
+          "RESCUE",
+          "FOOD_SUPPLY",
+          "MEDICAL_SUPPLIES"
+        ]
+      }
+    }
   }
 ]

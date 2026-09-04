@@ -23,6 +23,7 @@ from dotenv import load_dotenv
 
 from backend.services.detector import DroneDetector
 from backend.supabase_client import supabase
+from backend.operations.db_client import supabase as operations_supabase
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 
@@ -795,32 +796,51 @@ async def analyze_sos(request: SOSRequest):
             incident_row = priority_result_to_incident_row(
                 priority_result, location_text=location_text
             )
-            supabase.table("rescue_incidents").upsert(incident_row).execute()
+            incident_columns = {
+                "incident_id", "location_text", "latitude", "longitude",
+                "people_count", "priority_score", "priority_level", "status",
+                "people_remaining"
+            }
+            operations_supabase.table("rescue_incidents").upsert(
+                {
+                    key: value
+                    for key, value in incident_row.items()
+                    if key in incident_columns
+                }
+            ).execute()
         except Exception as log_err:
-            print(f"[WARN] Failed to save incident to rescue_incidents: {log_err}")
+            raise RuntimeError(
+                f"Failed to save incident to rescue_incidents: {log_err}"
+            )
 
-        # --------------------------------------------------------
-        # STORE SOS LOCALLY
-        # --------------------------------------------------------
-        # We intentionally do not use Supabase for SOS.
-        # Supabase is still used by the drone feature.
+        # Allocate boats immediately using priority score and remaining capacity.
+        run_module5()
+
+        incident_id = priority_result["incident_id"]
+        assignments = (
+            operations_supabase.table("rescue_assignments")
+            .select("*")
+            .eq("incident_id", incident_id)
+            .execute()
+            .data
+        )
+        incident = (
+            operations_supabase.table("rescue_incidents")
+            .select("*")
+            .eq("incident_id", incident_id)
+            .single()
+            .execute()
+            .data
+        )
 
         sos_record = {
-            "id": SOS_COUNTER,
-            "created_at": time.strftime(
-                "%Y-%m-%dT%H:%M:%SZ",
-                time.gmtime()
-            ),
-            "status": "Pending",
+            "id": incident_id,
+            "created_at": incident["created_at"],
+            "status": "ASSIGNED" if assignments else "PENDING",
             "original_message": request.message,
-            "extracted_data": result
+            "extracted_data": result,
+            "assignments": assignments,
         }
-
-        SOS_STORE.append(sos_record)
-
-        save_sos_store(SOS_STORE)
-
-        SOS_COUNTER += 1
 
         return sos_record
 
@@ -845,8 +865,43 @@ async def analyze_sos(request: SOSRequest):
 @app.get("/sos")
 def get_sos_requests():
     try:
+        incidents = (
+            operations_supabase.table("rescue_incidents")
+            .select("*")
+            .order("created_at", desc=True)
+            .execute()
+            .data
+        )
+        requests = []
+        for incident in incidents:
+            assignments = (
+                operations_supabase.table("rescue_assignments")
+                .select("*")
+                .eq("incident_id", incident["incident_id"])
+                .execute()
+                .data
+            )
+            requests.append({
+                "id": incident["incident_id"],
+                "created_at": incident["created_at"],
+                "status": "ASSIGNED" if assignments else "PENDING",
+                "original_message": "",
+                "extracted_data": {
+                    "location": {
+                        "text": incident.get("location_text"),
+                        "latitude": incident.get("latitude"),
+                        "longitude": incident.get("longitude"),
+                    },
+                    "people": {"total": incident.get("people_count")},
+                    "priority": {
+                        "priority_score": incident.get("priority_score"),
+                        "priority_level": incident.get("priority_level"),
+                    },
+                },
+                "assignments": assignments,
+            })
         return {
-            "requests": list(reversed(SOS_STORE))
+            "requests": requests
         }
 
     except Exception as e:
@@ -879,7 +934,18 @@ async def calculate_emergency_priority(
             incident_row = priority_result_to_incident_row(
                 result, location_text=location_text
             )
-            supabase.table("rescue_incidents").upsert(incident_row).execute()
+            incident_columns = {
+                "incident_id", "location_text", "latitude", "longitude",
+                "people_count", "priority_score", "priority_level", "status",
+                "people_remaining"
+            }
+            operations_supabase.table("rescue_incidents").upsert(
+                {
+                    key: value
+                    for key, value in incident_row.items()
+                    if key in incident_columns
+                }
+            ).execute()
         except Exception as log_err:
             print(f"[WARN] Failed to save incident to rescue_incidents: {log_err}")
             
@@ -3864,9 +3930,9 @@ async def trigger_module8():
 @app.get("/api/rescue-resources")
 async def get_rescue_resources():
     try:
-        incidents = supabase.table("rescue_incidents").select("*").execute().data
-        resources = supabase.table("rescue_resources").select("*").execute().data
-        assignments = supabase.table("rescue_assignments").select("*").execute().data
+        incidents = operations_supabase.table("rescue_incidents").select("*").execute().data
+        resources = operations_supabase.table("rescue_resources").select("*").execute().data
+        assignments = operations_supabase.table("rescue_assignments").select("*").execute().data
         return {"incidents": incidents, "resources": resources, "assignments": assignments}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load rescue data: {str(e)}")
@@ -3875,7 +3941,7 @@ async def get_rescue_resources():
 @app.get("/api/shelters-live")
 async def get_shelters_live():
     try:
-        shelters = supabase.table("shelters").select("*").execute().data
+        shelters = operations_supabase.table("shelters").select("*").execute().data
         return {"shelters": shelters}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load shelter data: {str(e)}")
@@ -3885,14 +3951,14 @@ async def get_shelters_live():
 async def get_relief_status():
     try:
         assessments = (
-            supabase.table("relief_status_view")
+            operations_supabase.table("relief_status_view")
             .select("*")
             .order("shelter_id")
             .execute()
             .data
         )
-        budgets = supabase.table("budgets").select("*").execute().data
-        expenses = supabase.table("expenses").select("*").execute().data
+        budgets = operations_supabase.table("budgets").select("*").execute().data
+        expenses = operations_supabase.table("expenses").select("*").execute().data
         total_allocated = sum(float(b["total_allocated"]) for b in budgets)
         total_spent = sum(float(e["amount"]) for e in expenses)
         return {

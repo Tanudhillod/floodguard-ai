@@ -22,7 +22,7 @@ export function StatusBadge({ label, tone = 'neutral' }: { label: string; tone?:
     warning: 'border-orange-200 bg-orange-50 text-orange-700',
   }
 
-  return <span className={`inline-flex items-center rounded-md border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] ${styles[tone]}`}>{label}</span>
+  return <span className={`inline-flex items-center rounded-md border px-2 py-1 text-[10px] font-semibold uppercase tracking-widest ${styles[tone]}`}>{label}</span>
 }
 
 export function Panel({ children, className = '' }: { children: React.ReactNode; className?: string }) {
