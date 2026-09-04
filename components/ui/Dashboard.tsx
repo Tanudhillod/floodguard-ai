@@ -42,29 +42,34 @@ const SENSOR_DATA = {
   waterFlow: 3.4,
 }
 
-const SENSOR_HISTORY = [
-  { time: "08:00", waterLevel: 1.8, rainfall: 8, soilMoisture: 65, temperature: 26.2, movement: 0.08, waterFlow: 1.8 },
-  { time: "10:00", waterLevel: 1.95, rainfall: 11, soilMoisture: 69, temperature: 27.0, movement: 0.09, waterFlow: 2.1 },
-  { time: "12:00", waterLevel: 2.08, rainfall: 14, soilMoisture: 72, temperature: 27.8, movement: 0.10, waterFlow: 2.7 },
-  { time: "14:00", waterLevel: 2.2, rainfall: 17, soilMoisture: 74, temperature: 28.1, movement: 0.11, waterFlow: 3.0 },
-  { time: "16:00", waterLevel: 2.28, rainfall: 21, soilMoisture: 76, temperature: 28.4, movement: 0.11, waterFlow: 3.2 },
-  { time: "18:00", waterLevel: 2.35, rainfall: 24.7, soilMoisture: 78, temperature: 28.5, movement: 0.12, waterFlow: 3.4 },
-]
+type SensorPoint = {
+  time: string
+  waterLevel?: number
+  soilMoisture?: number
+  temperature?: number
+  movement?: number
+  waterFlow?: number
+}
 
-type SensorKey = keyof typeof SENSOR_DATA
+type SensorKey =
+  | "waterLevel"
+  | "waterFlow"
+  | "soilMoisture"
+  | "temperature"
+  | "movement"
 
 const SENSOR_META: Record<SensorKey, { title: string; unit: string }> = {
-  waterLevel: { title: "Water Level", unit: "m" },
-  rainfall: { title: "Rainfall", unit: "mm" },
+  waterLevel: { title: "Water Level", unit: "cm" },
+  waterFlow: { title: "Water Flow", unit: "cm/min" },
   soilMoisture: { title: "Soil Moisture", unit: "%" },
   temperature: { title: "Temperature", unit: "°C" },
-  movement: { title: "Movement / Tilt", unit: "g" },
-  waterFlow: { title: "Water Flow", unit: "m/s" },
+  movement: { title: "Ground Movement", unit: "vibration index" },
 }
 
 export default function Dashboard() {
   const [currentTime, setCurrentTime] = useState<Date | null>(null)
   const [selectedSensor, setSelectedSensor] = useState<SensorKey>("waterLevel")
+  const [sensorHistory, setSensorHistory] = useState<SensorPoint[]>([])
 
   // Replace this object with your existing Model 1 API/Supabase state.
   const [floodRiskData] = useState({
@@ -77,6 +82,56 @@ export default function Dashboard() {
     setCurrentTime(new Date())
     const timer = window.setInterval(() => setCurrentTime(new Date()), 1000)
     return () => window.clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadSensorData() {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_FLOODGAURD_API_URL || "http://localhost:8000"}/api/thingspeak/sensor-data`,
+          { cache: "no-store" },
+        )
+        if (!response.ok) return
+
+        const payload = await response.json()
+        const points: SensorPoint[] = (payload.readings || []).map(
+          (reading: Record<string, unknown>) => ({
+            time: new Date(String(reading.created_at)).toLocaleTimeString("en-IN", {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            ...(typeof reading.water_distance_cm === "number" && {
+              waterLevel: reading.water_distance_cm,
+            }),
+            ...(typeof reading.soil_moisture_pct === "number" && {
+              soilMoisture: reading.soil_moisture_pct,
+            }),
+            ...(typeof reading.temperature_c === "number" && {
+              temperature: reading.temperature_c,
+            }),
+            ...(typeof reading.vibration_index === "number" && {
+              movement: reading.vibration_index,
+            }),
+            ...(typeof reading.water_rate_cm_per_min === "number" && {
+              waterFlow: reading.water_rate_cm_per_min,
+            }),
+          }),
+        )
+
+        if (!cancelled && points.length > 0) setSensorHistory(points)
+      } catch {
+        // Keep the graph stable when the sensor service is unavailable.
+      }
+    }
+
+    loadSensorData()
+    const timer = window.setInterval(loadSensorData, 15000)
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
   }, [])
 
   const graph = useMemo(() => SENSOR_META[selectedSensor], [selectedSensor])
@@ -166,19 +221,20 @@ export default function Dashboard() {
               </div>
 
               {/* heat zones */}
-              <HeatZone left="17%" top="15%" size="medium" risk="LOW" />
-              <HeatZone left="37%" top="44%" size="large" risk="MODERATE" />
-              <HeatZone left="57%" top="51%" size="large" risk="CRITICAL" />
-              <HeatZone left="71%" top="23%" size="medium" risk="HIGH" />
-              <HeatZone left="78%" top="62%" size="medium" risk="CRITICAL" />
+              <HeatZone left="18%" top="65%" size="medium" risk="LOW" />
+              <HeatZone left="42%" top="45%" size="large" risk="MODERATE" />
+              <HeatZone left="67%" top="30%" size="large" risk="CRITICAL" />
+              <HeatZone left="74%" top="18%" size="medium" risk="HIGH" />
+              <HeatZone left="55%" top="52%" size="medium" risk="CRITICAL" />
 
-              <MapPoint left="31%" top="35%" label="Mayur Vihar" />
-              <MapPoint left="59%" top="62%" label="Yamuna Bank" />
-              <MapPoint left="70%" top="35%" label="Laxmi Nagar" />
-              <MapPoint left="79%" top="65%" label="Shahdara" />
+              <MapPoint left="20%" top="70%" label="Guwahati" />
+              <MapPoint left="48%" top="48%" label="Jorhat" />
+              <MapPoint left="58%" top="55%" label="Sivasagar" />
+              <MapPoint left="72%" top="38%" label="Dibrugarh" />
+              <MapPoint left="80%" top="25%" label="Tinsukia" />
 
               <div className="absolute bottom-3 left-3 rounded-md bg-white px-3 py-2 text-[10px] font-semibold text-slate-600 shadow-sm">
-                EAST DELHI · LIVE RISK ZONES
+                ASSAM · LIVE RISK ZONES
               </div>
 
               <div className="absolute bottom-3 right-3 flex flex-wrap justify-end gap-x-3 gap-y-1 rounded-md bg-white px-3 py-2 text-[10px] shadow-sm">
@@ -287,17 +343,16 @@ export default function Dashboard() {
               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 outline-none focus:border-blue-500 sm:w-48"
             >
               <option value="waterLevel">Water Level</option>
-              <option value="rainfall">Rainfall</option>
+              <option value="waterFlow">Water Flow</option>
               <option value="soilMoisture">Soil Moisture</option>
               <option value="temperature">Temperature</option>
               <option value="movement">Ground Movement</option>
-              <option value="waterFlow">Water Flow</option>
             </select>
           </div>
 
           <div className="mt-4 h-77.5 w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={SENSOR_HISTORY} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+              <LineChart data={sensorHistory} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="time" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />

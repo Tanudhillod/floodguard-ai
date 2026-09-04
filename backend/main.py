@@ -4212,3 +4212,61 @@ async def get_relief_status():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load relief data: {str(e)}")
+
+
+def _thingspeak_number(value):
+    try:
+        number = float(value)
+        return number if math.isfinite(number) else None
+    except (TypeError, ValueError):
+        return None
+
+
+@app.get("/api/thingspeak/sensor-data")
+async def get_thingspeak_sensor_data():
+    channel_id = os.getenv("THINGSPEAK_CHANNEL_ID")
+    read_api_key = os.getenv("THINGSPEAK_READ_API_KEY")
+
+    if not channel_id or not read_api_key:
+        raise HTTPException(
+            status_code=500,
+            detail="ThingSpeak channel configuration is missing",
+        )
+
+    query = urllib.parse.urlencode({
+        "api_key": read_api_key,
+        "results": 20,
+    })
+    url = f"https://api.thingspeak.com/channels/{channel_id}/feeds.json?{query}"
+
+    try:
+        request = urllib.request.Request(url, headers={"Accept": "application/json"})
+        with urllib.request.urlopen(request, timeout=15) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        raise HTTPException(
+            status_code=502,
+            detail=f"ThingSpeak request failed: {error}",
+        )
+
+    readings = []
+    for feed in payload.get("feeds", []):
+        reading = {
+            "created_at": feed.get("created_at"),
+            "water_distance_cm": _thingspeak_number(feed.get("field1")),
+            "water_rate_cm_per_min": _thingspeak_number(feed.get("field2")),
+            "soil_moisture_pct": _thingspeak_number(feed.get("field3")),
+            "temperature_c": _thingspeak_number(feed.get("field4")),
+            "humidity_pct": _thingspeak_number(feed.get("field5")),
+            "vibration_index": _thingspeak_number(feed.get("field6")),
+            "latitude": _thingspeak_number(feed.get("field7")),
+            "longitude": _thingspeak_number(feed.get("field8")),
+        }
+        if reading["created_at"]:
+            readings.append(reading)
+
+    readings.reverse()
+    return {
+        "readings": readings,
+        "latest": readings[0] if readings else None,
+    }
