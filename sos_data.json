@@ -648,5 +648,81 @@
         ]
       }
     }
+  },
+  {
+    "id": "INC11",
+    "created_at": "2026-09-04T15:29:01.507662+00:00",
+    "status": "PENDING",
+    "original_message": "24 people need help. Needs: MEDICAL, SHELTER, FOOD, RESCUE. Location: 28.60637, 77.11636. Situation: URGENT! We are trapped in Supaul, Bihar due to rapidly rising flood water. 24 people need immediate rescue, including 4 children, 2 elderly people, 2 injured people, and 1 person with mobility difficulties. Water has entered the house and is continuing to rise. We have no safe way to evacuate. We urgently need rescue, drinking water, food, shelter, and medical assistance. Please send help immediately.",
+    "extracted_data": {
+      "source_type": "GROUP_SOS",
+      "location": {
+        "text": "Supaul, Bihar",
+        "latitude": 28.60637,
+        "longitude": 77.11636
+      },
+      "people": {
+        "total": "24",
+        "children": "4",
+        "elderly": "2",
+        "pregnant": null,
+        "injured": "2",
+        "missing": null,
+        "deceased": null,
+        "mobility_impaired": "1"
+      },
+      "situation": "Trapped in Supaul, Bihar due to rapidly rising flood water; water has entered the house and is continuing to rise.",
+      "request": {
+        "type": "RESCUE",
+        "resources": [
+          "MEDICAL",
+          "SHELTER",
+          "FOOD",
+          "RESCUE",
+          "WATER"
+        ]
+      },
+      "needs": {
+        "food": true,
+        "water": true,
+        "medicine": true,
+        "shelter": true,
+        "rescue": true,
+        "medical_transfer": false
+      },
+      "contact_info": [],
+      "original_message": "24 people need help. Needs: MEDICAL, SHELTER, FOOD, RESCUE. Location: 28.60637, 77.11636. Situation: URGENT! We are trapped in Supaul, Bihar due to rapidly rising flood water. 24 people need immediate rescue, including 4 children, 2 elderly people, 2 injured people, and 1 person with mobility difficulties. Water has entered the house and is continuing to rise. We have no safe way to evacuate. We urgently need rescue, drinking water, food, shelter, and medical assistance. Please send help immediately.",
+      "priority": {
+        "priority": "HIGH",
+        "priority_score": 66,
+        "score_breakdown": {
+          "people_score": 18,
+          "vulnerability_score": 20,
+          "needs_score": 17,
+          "request_score": 6,
+          "flood_score": 0,
+          "location_score": 5
+        },
+        "inputs": {
+          "sos_people": 24,
+          "feature2_people": null,
+          "effective_people": 24,
+          "flood_severity": 0.0
+        },
+        "recommended_actions": [
+          "RESCUE",
+          "WATER_SUPPLY",
+          "FOOD_SUPPLY",
+          "MEDICAL_SUPPLIES",
+          "SHELTER"
+        ],
+        "incident_id": "INC11",
+        "people": 24,
+        "latitude": 28.60637,
+        "longitude": 77.11636,
+        "status": "WAITING_FOR_RESCUE"
+      }
+    },
+    "assignments": []
   }
 ]

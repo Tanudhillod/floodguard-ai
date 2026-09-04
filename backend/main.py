@@ -112,7 +112,11 @@ SOS_STORE = load_sos_store()
 
 SOS_COUNTER = (
     max(
-        [int(item.get("id", 0)) for item in SOS_STORE]
+        [
+            int(item.get("id", 0))
+            for item in SOS_STORE
+            if str(item.get("id", "")).isdigit()
+        ]
         or [0]
     )
     + 1
@@ -840,6 +844,16 @@ async def analyze_sos(request: SOSRequest):
             flood_severity=0.0
         )
 
+        location = result.get("location", {})
+        priority_result.update({
+            "incident_id": f"INC{SOS_COUNTER}",
+            "people": priority_result["inputs"]["effective_people"],
+            "latitude": location.get("latitude"),
+            "longitude": location.get("longitude"),
+            "status": "WAITING_FOR_RESCUE",
+        })
+        SOS_COUNTER += 1
+
         result["priority"] = priority_result
         try:
             location_text = result.get("location", {}).get("text")
@@ -892,6 +906,9 @@ async def analyze_sos(request: SOSRequest):
             "assignments": assignments,
         }
 
+        SOS_STORE.append(sos_record)
+        save_sos_store(SOS_STORE)
+
         return sos_record
 
     except ValueError as e:
@@ -923,6 +940,10 @@ def get_sos_requests():
             .data
         )
         requests = []
+        stored_sos = {
+            str(item.get("id")): item
+            for item in SOS_STORE
+        }
         for incident in incidents:
             assignments = (
                 operations_supabase.table("rescue_assignments")
@@ -931,23 +952,48 @@ def get_sos_requests():
                 .execute()
                 .data
             )
+
+            stored_request = stored_sos.get(
+                str(incident["incident_id"]),
+                {}
+            )
+            extracted_data = stored_request.get(
+                "extracted_data",
+                {}
+            )
+            if isinstance(extracted_data, str):
+                try:
+                    extracted_data = json.loads(extracted_data)
+                except (json.JSONDecodeError, TypeError):
+                    extracted_data = {}
+            if not isinstance(extracted_data, dict):
+                extracted_data = {}
+
+            extracted_data["location"] = {
+                **extracted_data.get("location", {}),
+                "text": incident.get("location_text"),
+                "latitude": incident.get("latitude"),
+                "longitude": incident.get("longitude"),
+            }
+            extracted_data["people"] = {
+                **extracted_data.get("people", {}),
+                "total": incident.get("people_count"),
+            }
+            extracted_data["priority"] = {
+                **extracted_data.get("priority", {}),
+                "priority_score": incident.get("priority_score"),
+                "priority_level": incident.get("priority_level"),
+            }
+
             requests.append({
                 "id": incident["incident_id"],
                 "created_at": incident["created_at"],
                 "status": "ASSIGNED" if assignments else "PENDING",
-                "original_message": "",
-                "extracted_data": {
-                    "location": {
-                        "text": incident.get("location_text"),
-                        "latitude": incident.get("latitude"),
-                        "longitude": incident.get("longitude"),
-                    },
-                    "people": {"total": incident.get("people_count")},
-                    "priority": {
-                        "priority_score": incident.get("priority_score"),
-                        "priority_level": incident.get("priority_level"),
-                    },
-                },
+                "original_message": stored_request.get(
+                    "original_message",
+                    extracted_data.get("original_message", "")
+                ),
+                "extracted_data": extracted_data,
                 "assignments": assignments,
             })
         return {
