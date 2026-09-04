@@ -691,6 +691,32 @@ export default function RiskPage() {
 
                           <div>
                             <div className="text-xs text-[#829AB1]">
+                              Location
+                            </div>
+
+                            <div className="mt-1 text-sm font-semibold text-[#243B53]">
+                              {item.location || "Unknown location"}
+                            </div>
+
+                            {(item.latitude != null ||
+                              item.longitude != null) && (
+                              <div className="mt-2 rounded-lg border border-[#E6EDF3] bg-[#F8FAFC] px-3 py-2">
+                                {item.latitude != null && (
+                                  <div className="text-xs text-[#627D98]">
+                                    Latitude: {item.latitude}
+                                  </div>
+                                )}
+                                {item.longitude != null && (
+                                  <div className="mt-1 text-xs text-[#627D98]">
+                                    Longitude: {item.longitude}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          <div>
+                            <div className="text-xs text-[#829AB1]">
                               Situation
                             </div>
 

@@ -129,18 +129,6 @@ export default function UserSOSPage() {
 
   const [message, setMessage] = useState("")
 
-  const [location, setLocation] = useState("")
-
-  const [latitude, setLatitude] =
-    useState<number | null>(null)
-
-  const [longitude, setLongitude] =
-    useState<number | null>(null)
-
-  const [locationStatus, setLocationStatus] =
-    useState<
-      "idle" | "loading" | "success" | "error"
-    >("idle")
 
   const [submitting, setSubmitting] =
     useState(false)
@@ -160,49 +148,11 @@ export default function UserSOSPage() {
   }
 
 
-  function getLocation() {
-    if (!navigator.geolocation) {
-      setLocationStatus("error")
-      setLocation("Location unavailable")
-      return
-    }
-
-    setLocationStatus("loading")
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude
-        const lon = position.coords.longitude
-
-        setLatitude(lat)
-        setLongitude(lon)
-
-        setLocation(
-          `${lat.toFixed(5)}, ${lon.toFixed(5)}`
-        )
-
-        setLocationStatus("success")
-      },
-      () => {
-        setLocationStatus("error")
-        setLocation("Location unavailable")
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-      }
-    )
-  }
-
-
   function buildMessage() {
     const needsText =
       selectedNeeds.length > 0
         ? selectedNeeds.join(", ")
         : "EMERGENCY ASSISTANCE"
-
-    const locationText =
-      location || "Location not available"
 
     const description =
       message.trim() ||
@@ -210,7 +160,7 @@ export default function UserSOSPage() {
 
     return `${people} ${
       people === 1 ? "person" : "people"
-    } need help. Needs: ${needsText}. Location: ${locationText}. Situation: ${description}`
+    } need help. Needs: ${needsText}. Location: not provided. Situation: ${description}`
   }
 
 
@@ -323,10 +273,6 @@ export default function UserSOSPage() {
     setMessage("")
     setResult(null)
     setError("")
-    setLocation("")
-    setLatitude(null)
-    setLongitude(null)
-    setLocationStatus("idle")
   }
 
 
@@ -410,10 +356,7 @@ export default function UserSOSPage() {
             </p>
 
             <button
-              onClick={() => {
-                setStep("form")
-                getLocation()
-              }}
+              onClick={() => setStep("form")}
               className="mx-auto mt-9 flex h-20 w-20 items-center justify-center rounded-full bg-[#c62828] text-sm font-bold tracking-wide text-white shadow-lg shadow-red-200 transition hover:bg-[#ad2020] hover:shadow-xl active:scale-95 sm:h-24 sm:w-24"
             >
               SOS
@@ -520,57 +463,6 @@ export default function UserSOSPage() {
             <p className="mt-2 text-sm text-slate-500">
               A few details help the response team act faster.
             </p>
-
-          </div>
-
-
-          {/* LOCATION */}
-
-          <div className="mb-7 rounded-xl border border-slate-200 bg-white p-4">
-
-            <div className="flex items-start gap-3">
-
-              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                <MapPin size={17} />
-              </div>
-
-              <div className="min-w-0 flex-1">
-
-                <div className="text-sm font-semibold text-[#0f2742]">
-                  Your location
-                </div>
-
-                <div className="mt-1 text-xs text-slate-500">
-
-                  {locationStatus === "loading"
-                    ? "Detecting your location..."
-                    : locationStatus === "success"
-                      ? location
-                      : locationStatus === "error"
-                        ? "Location could not be detected"
-                        : "Location not detected yet"}
-
-                </div>
-
-              </div>
-
-              {locationStatus === "success" && (
-                <Check
-                  size={18}
-                  className="mt-1 text-green-600"
-                />
-              )}
-
-              {locationStatus === "error" && (
-                <button
-                  onClick={getLocation}
-                  className="text-xs font-semibold text-blue-600"
-                >
-                  Retry
-                </button>
-              )}
-
-            </div>
 
           </div>
 

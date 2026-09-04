@@ -765,6 +765,266 @@ async def flood_risk(request: FloodRiskRequest):
 # FEATURE 3 — SOS INTELLIGENCE
 # ============================================================
 
+
+# ============================================================
+# GEOCODE SOS LOCATION
+# ============================================================
+
+def _geocode_sos_location(extracted):
+    """
+    Add coordinates from the SOS human-readable location.
+
+    Primary:
+        Google Geocoding API
+
+    Fallback:
+        Google Places Text Search API
+
+    No browser/device GPS is used.
+    """
+    if not isinstance(extracted, dict):
+        return False
+
+    location_data = extracted.get("location")
+
+    if isinstance(location_data, str):
+        location_data = {"text": location_data.strip()}
+    elif isinstance(location_data, dict):
+        location_data = dict(location_data)
+    else:
+        location_data = {}
+
+    location_text = str(
+        location_data.get("text")
+        or location_data.get("name")
+        or ""
+    ).strip()
+
+    if not location_text or location_text.lower() in {
+        "location not provided",
+        "location not available",
+        "not provided",
+        "unknown",
+        "none",
+        "null",
+    }:
+        extracted["location"] = location_data
+        return False
+
+    # Do not overwrite coordinates that already exist.
+    if (
+        location_data.get("latitude") is not None
+        and location_data.get("longitude") is not None
+    ):
+        extracted["location"] = location_data
+        return False
+
+    if not GOOGLE_MAPS_API_KEY:
+        print(
+            "⚠️ GOOGLE_MAPS_API_KEY not configured; "
+            "SOS coordinates unavailable."
+        )
+        extracted["location"] = location_data
+        return False
+
+    address = location_text
+    if "india" not in address.lower():
+        address = f"{address}, India"
+
+    # ============================================================
+    # 1. GOOGLE GEOCODING API
+    # ============================================================
+    geocode_url = (
+        "https://maps.googleapis.com/maps/api/geocode/json?"
+        + urllib.parse.urlencode({
+            "address": address,
+            "key": GOOGLE_MAPS_API_KEY,
+        })
+    )
+
+    try:
+        with urllib.request.urlopen(
+            geocode_url,
+            timeout=10
+        ) as response:
+            data = json.loads(
+                response.read().decode(
+                    "utf-8",
+                    errors="replace"
+                )
+            )
+
+        results = data.get("results", [])
+        api_status = data.get("status")
+
+        if results:
+            coordinates = results[0].get(
+                "geometry",
+                {}
+            ).get(
+                "location",
+                {}
+            )
+
+            latitude = coordinates.get("lat")
+            longitude = coordinates.get("lng")
+
+            if latitude is not None and longitude is not None:
+                location_data["latitude"] = float(latitude)
+                location_data["longitude"] = float(longitude)
+                location_data["geocoded"] = True
+                location_data["geocoded_address"] = (
+                    results[0].get("formatted_address")
+                )
+                location_data["coordinate_source"] = "geocoding"
+
+                extracted["location"] = location_data
+
+                print(
+                    "📍 SOS location geocoded:",
+                    location_text,
+                    "→",
+                    latitude,
+                    longitude
+                )
+                return True
+
+        # IMPORTANT: show the real Google response status.
+        print(
+            f"⚠️ Google Geocoding returned no usable result for "
+            f"'{location_text}'. Status: {api_status}. "
+            f"Error: {data.get('error_message', 'none')}"
+        )
+
+    except urllib.error.HTTPError as e:
+        try:
+            error_body = e.read().decode(
+                "utf-8",
+                errors="replace"
+            )
+        except Exception:
+            error_body = ""
+
+        print(
+            f"⚠️ Google Geocoding HTTP error for "
+            f"'{location_text}': {e.code} {error_body[:500]}"
+        )
+
+    except Exception as e:
+        print(
+            f"⚠️ Google Geocoding failed for "
+            f"'{location_text}': {e}"
+        )
+
+    # ============================================================
+    # 2. GOOGLE PLACES TEXT SEARCH FALLBACK
+    # ============================================================
+    # Places search is already used by FloodGuard for shelters.
+    # This fallback lets us resolve city/district names even when
+    # the Geocoding API returns ZERO_RESULTS.
+    # ============================================================
+
+    places_url = (
+        "https://places.googleapis.com/v1/places:searchText"
+    )
+
+    places_payload = {
+        "textQuery": address,
+        "maxResultCount": 1,
+        "languageCode": "en",
+    }
+
+    places_request = urllib.request.Request(
+        places_url,
+        data=json.dumps(
+            places_payload
+        ).encode("utf-8"),
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": GOOGLE_MAPS_API_KEY,
+            "X-Goog-FieldMask": (
+                "places.displayName,"
+                "places.formattedAddress,"
+                "places.location"
+            ),
+        },
+    )
+
+    try:
+        with urllib.request.urlopen(
+            places_request,
+            timeout=10
+        ) as response:
+            places_data = json.loads(
+                response.read().decode(
+                    "utf-8",
+                    errors="replace"
+                )
+            )
+
+        places = places_data.get("places", [])
+
+        if places:
+            place = places[0]
+            coordinates = place.get(
+                "location",
+                {}
+            )
+
+            latitude = coordinates.get("latitude")
+            longitude = coordinates.get("longitude")
+
+            if latitude is not None and longitude is not None:
+                location_data["latitude"] = float(latitude)
+                location_data["longitude"] = float(longitude)
+                location_data["geocoded"] = True
+                location_data["geocoded_address"] = (
+                    place.get("formattedAddress")
+                )
+                location_data["coordinate_source"] = "places"
+
+                extracted["location"] = location_data
+
+                print(
+                    "📍 SOS location resolved via Places:",
+                    location_text,
+                    "→",
+                    latitude,
+                    longitude
+                )
+                return True
+
+        print(
+            f"⚠️ Google Places returned no usable result for "
+            f"'{location_text}'. "
+            f"Error: {places_data.get('error', 'none')}"
+        )
+
+    except urllib.error.HTTPError as e:
+        try:
+            error_body = e.read().decode(
+                "utf-8",
+                errors="replace"
+            )
+        except Exception:
+            error_body = ""
+
+        print(
+            f"⚠️ Google Places HTTP error for "
+            f"'{location_text}': {e.code} {error_body[:500]}"
+        )
+
+    except Exception as e:
+        print(
+            f"⚠️ Google Places fallback failed for "
+            f"'{location_text}': {e}"
+        )
+
+    extracted["location"] = location_data
+    return False
+
+
 @app.post("/sos")
 async def analyze_sos(request: SOSRequest):
     global SOS_COUNTER
@@ -774,6 +1034,10 @@ async def analyze_sos(request: SOSRequest):
         # FEATURE 3 — SOS INTELLIGENCE
         # --------------------------------------------------------
         result = extract_sos_llm(request.message)
+
+        # Convert the Lyzr location (e.g. Dibrugarh, Assam) to coordinates.
+        # No browser/device GPS is used.
+        _geocode_sos_location(result)
 
         # --------------------------------------------------------
         # FEATURE 4 — PRIORITY INTELLIGENCE
@@ -832,6 +1096,30 @@ async def analyze_sos(request: SOSRequest):
 @app.get("/sos")
 def get_sos_requests():
     try:
+        # Backfill coordinates for SOS records created before geocoding existed.
+        changed = False
+        for sos in SOS_STORE:
+            extracted = sos.get("extracted_data")
+            if isinstance(extracted, str):
+                try:
+                    extracted = json.loads(extracted)
+                except (json.JSONDecodeError, TypeError):
+                    extracted = None
+
+            if isinstance(extracted, dict):
+                location = extracted.get("location")
+                has_coordinates = (
+                    isinstance(location, dict)
+                    and location.get("latitude") is not None
+                    and location.get("longitude") is not None
+                )
+                if not has_coordinates and _geocode_sos_location(extracted):
+                    sos["extracted_data"] = extracted
+                    changed = True
+
+        if changed:
+            save_sos_store(SOS_STORE)
+
         return {
             "requests": list(reversed(SOS_STORE))
         }
@@ -963,6 +1251,29 @@ async def priority_dashboard(
                 sos.get("status", "Pending")
             ).lower() in active_statuses
         ]
+
+
+        # Backfill coordinates here too for the Priority dashboard.
+        changed = False
+        for sos in active_sos:
+            extracted = sos.get("extracted_data")
+            if isinstance(extracted, str):
+                try:
+                    extracted = json.loads(extracted)
+                except (json.JSONDecodeError, TypeError):
+                    extracted = None
+            if isinstance(extracted, dict):
+                location = extracted.get("location")
+                has_coordinates = (
+                    isinstance(location, dict)
+                    and location.get("latitude") is not None
+                    and location.get("longitude") is not None
+                )
+                if not has_coordinates and _geocode_sos_location(extracted):
+                    sos["extracted_data"] = extracted
+                    changed = True
+        if changed:
+            save_sos_store(SOS_STORE)
 
 
         # ========================================================
@@ -1258,6 +1569,41 @@ async def priority_dashboard(
 
                     except (TypeError, ValueError):
                         pass
+            
+            # ====================================================
+            # 4C-3. DRONE LOCATION FALLBACK
+            # ====================================================
+            # Location priority:
+            #   1. SOS location coordinates, when available
+            #   2. Matched drone coordinates, when SOS coordinates
+            #      are missing
+            #
+            # The drone filename is the trusted source for drone GPS.
+            # ====================================================
+
+            if best_drone:
+                if sos_latitude is None or sos_longitude is None:
+                    drone_lat = best_drone.get("latitude")
+                    drone_lon = best_drone.get("longitude")
+
+                    if drone_lat is not None and drone_lon is not None:
+                        try:
+                            sos_latitude = float(drone_lat)
+                            sos_longitude = float(drone_lon)
+
+                            print(
+                                "📍 Using DRONE location as SOS fallback:",
+                                sos_latitude,
+                                sos_longitude
+                            )
+                        except (TypeError, ValueError):
+                            pass
+
+                if not sos_location:
+                    sos_location = str(
+                        best_drone.get("location") or ""
+                    ).strip()
+
 
             # ====================================================
             # 4D. GET DRONE PEOPLE COUNT

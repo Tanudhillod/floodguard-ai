@@ -558,19 +558,19 @@ function SOSDetailsModal({
               {(location.latitude != null ||
                 location.longitude != null) && (
 
-                <p className="mt-1 text-xs text-slate-400">
+                <div className="mt-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                  {location.latitude != null && (
+                    <p className="text-xs font-medium text-slate-600">
+                      Latitude: {location.latitude}
+                    </p>
+                  )}
 
-                  {location.latitude != null &&
-                    `Latitude: ${location.latitude}`}
-
-                  {location.latitude != null &&
-                    location.longitude != null &&
-                    " • "}
-
-                  {location.longitude != null &&
-                    `Longitude: ${location.longitude}`}
-
-                </p>
+                  {location.longitude != null && (
+                    <p className="mt-1 text-xs font-medium text-slate-600">
+                      Longitude: {location.longitude}
+                    </p>
+                  )}
+                </div>
 
               )}
 

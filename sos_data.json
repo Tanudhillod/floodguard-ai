@@ -8,8 +8,11 @@
       "source_type": "GROUP_SOS",
       "location": {
         "text": "Kuttanad",
-        "latitude": null,
-        "longitude": null
+        "latitude": 9.3527659,
+        "longitude": 76.4042404,
+        "geocoded": true,
+        "geocoded_address": "Kuttanad, India",
+        "coordinate_source": "demo_seed"
       },
       "people": {
         "total": "6",
@@ -71,9 +74,12 @@
     "extracted_data": {
       "source_type": "GROUP_SOS",
       "location": {
-        "text": "Cuttack Odisha",
-        "latitude": null,
-        "longitude": null
+        "text": "Cuttack, Odisha",
+        "latitude": 20.462521,
+        "longitude": 85.8829895,
+        "geocoded": true,
+        "geocoded_address": "Cuttack, Odisha, India",
+        "coordinate_source": "demo_seed"
       },
       "people": {
         "total": "8",
@@ -102,7 +108,7 @@
         "medical_transfer": false
       },
       "contact_info": [],
-      "original_message": "There are 8 people trapped in a flooded house in Cuttack Odisha. Three are elderly and one is injured. We need immediate rescue and medical assistance.",
+      "original_message": "There are 8 people trapped in a flooded house in Cuttack Odisha. Three are elderly and one person is injured. We need immediate rescue and medical assistance.",
       "priority": {
         "priority": "CRITICAL",
         "priority_score": 67,
@@ -131,13 +137,16 @@
     "id": 3,
     "created_at": "2026-09-03T19:49:27Z",
     "status": "Pending",
-    "original_message": "1 person need help. Needs: SHELTER. Location: 28.63596, 77.22107. Situation: Contact: 9876543210\n\nURGENT! Flood water has entered our house in Supaul, Bihar and is rising quickly. There are 10 people trapped inside, including 2 children and my 68-year-old grandmother. We need immediate rescue. We are running out of drinking water and food.",
+    "original_message": "1 person need help. Needs: SHELTER. Location: not provided. Situation: Contact: 9876543210\n\nURGENT! Flood water has entered our house in Supaul, Bihar and is rising quickly. There are 10 people trapped inside, including 2 children and my 68-year-old grandmother. We need immediate rescue. We are running out of drinking water and food.",
     "extracted_data": {
       "source_type": "GROUP_SOS",
       "location": {
         "text": "Supaul, Bihar",
-        "latitude": null,
-        "longitude": null
+        "latitude": 26.1233718,
+        "longitude": 86.6045134,
+        "geocoded": true,
+        "geocoded_address": "Supaul, Bihar, India",
+        "coordinate_source": "demo_seed"
       },
       "people": {
         "total": "10",
@@ -167,7 +176,7 @@
       "contact_info": [
         "9876543210"
       ],
-      "original_message": "1 person need help. Needs: SHELTER. Location: 28.63596, 77.22107. Situation: Contact: 9876543210\n\nURGENT! Flood water has entered our house in Supaul, Bihar and is rising quickly. There are 10 people trapped inside, including 2 children and my 68-year-old grandmother. We need immediate rescue. We are running out of drinking water and food.",
+      "original_message": "1 person need help. Needs: SHELTER. Location: not provided. Situation: Contact: 9876543210\n\nURGENT! Flood water has entered our house in Supaul, Bihar and is rising quickly. There are 10 people trapped inside, including 2 children and my 68-year-old grandmother. We need immediate rescue. We are running out of drinking water and food.",
       "priority": {
         "priority": "CRITICAL",
         "priority_score": 61,
@@ -197,13 +206,16 @@
     "id": 4,
     "created_at": "2026-09-03T19:50:05Z",
     "status": "Pending",
-    "original_message": "2 people need help. Needs: SHELTER. Location: 28.67131, 77.31166. Situation: Contact: 9123456780\n\nPlease send medical help to Patna, Bihar. My father was injured during the flood and has a deep wound on his leg. We are 6 people in the house, including one elderly person. We need urgent medical assistance and an ambulance.",
+    "original_message": "2 people need help. Needs: SHELTER. Location: not provided. Situation: Contact: 9123456780\n\nPlease send medical help to Patna, Bihar. My father was injured during the flood and has a deep wound on his leg. We are 6 people in the house, including one elderly person. We need urgent medical assistance and an ambulance.",
     "extracted_data": {
       "source_type": "MEDICAL_SOS",
       "location": {
         "text": "Patna, Bihar",
-        "latitude": 28.67131,
-        "longitude": 77.31166
+        "latitude": 25.5941,
+        "longitude": 85.1376,
+        "geocoded": true,
+        "coordinate_source": "demo_seed",
+        "geocoded_address": "Patna, Bihar, India"
       },
       "people": {
         "total": "6",
@@ -233,7 +245,7 @@
       "contact_info": [
         "9123456780"
       ],
-      "original_message": "2 people need help. Needs: SHELTER. Location: 28.67131, 77.31166. Situation: Contact: 9123456780\n\nPlease send medical help to Patna, Bihar. My father was injured during the flood and has a deep wound on his leg. We are 6 people in the house, including one elderly person. We need urgent medical assistance and an ambulance.",
+      "original_message": "2 people need help. Needs: SHELTER. Location: not provided. Situation: Contact: 9123456780\n\nPlease send medical help to Patna, Bihar. My father was injured during the flood and has a deep wound on his leg. We are 6 people in the house, including one elderly person. We need urgent medical assistance and an ambulance.",
       "priority": {
         "priority": "HIGH",
         "priority_score": 58,
@@ -261,13 +273,16 @@
     "id": 5,
     "created_at": "2026-09-03T19:50:27Z",
     "status": "Pending",
-    "original_message": "1 person need help. Needs: FOOD. Location: 28.67131, 77.31166. Situation: We are trapped in our house in Malda, West Bengal. There are 14 people here, including 4 children, 2 elderly people and 1 pregnant woman. The water is rising rapidly. Please send rescue assistance and drinking water.",
+    "original_message": "1 person need help. Needs: FOOD. Location: not provided. Situation: We are trapped in our house in Malda, West Bengal. There are 14 people here, including 4 children, 2 elderly people and 1 pregnant woman. The water is rising rapidly. Please send rescue assistance and drinking water.",
     "extracted_data": {
       "source_type": "GROUP_SOS",
       "location": {
-        "text": "28.67131, 77.31166",
-        "latitude": 28.67131,
-        "longitude": 77.31166
+        "text": "Malda, West Bengal",
+        "latitude": 25.0108,
+        "longitude": 88.1411,
+        "geocoded": true,
+        "coordinate_source": "demo_seed",
+        "geocoded_address": "Malda, West Bengal, India"
       },
       "people": {
         "total": "14",
@@ -296,7 +311,7 @@
         "medical_transfer": false
       },
       "contact_info": [],
-      "original_message": "1 person need help. Needs: FOOD. Location: 28.67131, 77.31166. Situation: We are trapped in our house in Malda, West Bengal. There are 14 people here, including 4 children, 2 elderly people and 1 pregnant woman. The water is rising rapidly. Please send rescue assistance and drinking water.",
+      "original_message": "1 person need help. Needs: FOOD. Location: not provided. Situation: We are trapped in our house in Malda, West Bengal. There are 14 people here, including 4 children, 2 elderly people and 1 pregnant woman. The water is rising rapidly. Please send rescue assistance and drinking water.",
       "priority": {
         "priority": "CRITICAL",
         "priority_score": 77,
@@ -326,13 +341,16 @@
     "id": 6,
     "created_at": "2026-09-03T19:50:43Z",
     "status": "Pending",
-    "original_message": "1 person need help. Needs: MEDICAL. Location: 28.67131, 77.31166. Situation: Contact: 9988776655\n\nFlood water has surrounded our house in Gorakhpur, Uttar Pradesh. There are 8 people here and my brother uses a wheelchair and cannot move downstairs. We need immediate evacuation and medical assistance if possible.",
+    "original_message": "1 person need help. Needs: MEDICAL. Location: not provided. Situation: Contact: 9988776655\n\nFlood water has surrounded our house in Gorakhpur, Uttar Pradesh. There are 8 people here and my brother uses a wheelchair and cannot move downstairs. We need immediate evacuation and medical assistance if possible.",
     "extracted_data": {
       "source_type": "GROUP_SOS",
       "location": {
         "text": "Gorakhpur, Uttar Pradesh",
-        "latitude": 28.67131,
-        "longitude": 77.31166
+        "latitude": 26.7606,
+        "longitude": 83.3732,
+        "geocoded": true,
+        "coordinate_source": "demo_seed",
+        "geocoded_address": "Gorakhpur, Uttar Pradesh, India"
       },
       "people": {
         "total": "8",
@@ -363,7 +381,7 @@
       "contact_info": [
         "9988776655"
       ],
-      "original_message": "1 person need help. Needs: MEDICAL. Location: 28.67131, 77.31166. Situation: Contact: 9988776655\n\nFlood water has surrounded our house in Gorakhpur, Uttar Pradesh. There are 8 people here and my brother uses a wheelchair and cannot move downstairs. We need immediate evacuation and medical assistance if possible.",
+      "original_message": "1 person need help. Needs: MEDICAL. Location: not provided. Situation: Contact: 9988776655\n\nFlood water has surrounded our house in Gorakhpur, Uttar Pradesh. There are 8 people here and my brother uses a wheelchair and cannot move downstairs. We need immediate evacuation and medical assistance if possible.",
       "priority": {
         "priority": "HIGH",
         "priority_score": 56,
@@ -392,13 +410,16 @@
     "id": 7,
     "created_at": "2026-09-03T19:50:59Z",
     "status": "Pending",
-    "original_message": "1 person need help. Needs: FOOD. Location: 28.67131, 77.31166. Situation: We are safe on the first floor in Dibrugarh, Assam, but 16 people are running out of food and drinking water. Three people are elderly and one person needs regular medicine. We do not need evacuation right now, but urgently need food, water and medicines.",
+    "original_message": "1 person need help. Needs: FOOD. Location: not provided. Situation: We are safe on the first floor in Dibrugarh, Assam, but 16 people are running out of food and drinking water. Three people are elderly and one person needs regular medicine. We do not need evacuation right now, but urgently need food, water and medicines.",
     "extracted_data": {
       "source_type": "GROUP_SOS",
       "location": {
         "text": "Dibrugarh, Assam",
-        "latitude": 28.67131,
-        "longitude": 77.31166
+        "latitude": 27.4705449,
+        "longitude": 94.9124625,
+        "geocoded": true,
+        "coordinate_source": "demo_seed",
+        "geocoded_address": "Dibrugarh, Assam, India"
       },
       "people": {
         "total": "16",
@@ -428,7 +449,7 @@
         "medical_transfer": false
       },
       "contact_info": [],
-      "original_message": "1 person need help. Needs: FOOD. Location: 28.67131, 77.31166. Situation: We are safe on the first floor in Dibrugarh, Assam, but 16 people are running out of food and drinking water. Three people are elderly and one person needs regular medicine. We do not need evacuation right now, but urgently need food, water and medicines.",
+      "original_message": "1 person need help. Needs: FOOD. Location: not provided. Situation: We are safe on the first floor in Dibrugarh, Assam, but 16 people are running out of food and drinking water. Three people are elderly and one person needs regular medicine. We do not need evacuation right now, but urgently need food, water and medicines.",
       "priority": {
         "priority": "HIGH",
         "priority_score": 47,
@@ -458,13 +479,16 @@
     "id": 8,
     "created_at": "2026-09-03T19:51:44Z",
     "status": "Pending",
-    "original_message": "1 person need help. Needs: SHELTER. Location: 28.67131, 77.31166. Situation: HELP! Water has reached the second floor in Supaul, Bihar. There are 20 people trapped here, including 5 children, 3 elderly people and 2 injured people. One injured person is having difficulty breathing. Please send a rescue team and medical assistance immediately.\ncontact me asap at 9012345678",
+    "original_message": "1 person need help. Needs: SHELTER. Location: not provided. Situation: HELP! Water has reached the second floor in Supaul, Bihar. There are 20 people trapped here, including 5 children, 3 elderly people and 2 injured people. One injured person is having difficulty breathing. Please send a rescue team and medical assistance immediately.\ncontact me asap at 9012345678",
     "extracted_data": {
       "source_type": "GROUP_SOS",
       "location": {
         "text": "Supaul, Bihar",
-        "latitude": 28.67131,
-        "longitude": 77.31166
+        "latitude": 26.1233718,
+        "longitude": 86.6045134,
+        "geocoded": true,
+        "coordinate_source": "demo_seed",
+        "geocoded_address": "Supaul, Bihar, India"
       },
       "people": {
         "total": "20",
@@ -495,7 +519,7 @@
       "contact_info": [
         "9012345678"
       ],
-      "original_message": "1 person need help. Needs: SHELTER. Location: 28.67131, 77.31166. Situation: HELP! Water has reached the second floor in Supaul, Bihar. There are 20 people trapped here, including 5 children, 3 elderly people and 2 injured people. One injured person is having difficulty breathing. Please send a rescue team and medical assistance immediately.\ncontact me asap at 9012345678",
+      "original_message": "1 person need help. Needs: SHELTER. Location: not provided. Situation: HELP! Water has reached the second floor in Supaul, Bihar. There are 20 people trapped here, including 5 children, 3 elderly people and 2 injured people. One injured person is having difficulty breathing. Please send a rescue team and medical assistance immediately.\ncontact me asap at 9012345678",
       "priority": {
         "priority": "CRITICAL",
         "priority_score": 86,
@@ -515,6 +539,280 @@
         },
         "recommended_actions": [
           "RESCUE",
+          "MEDICAL_SUPPLIES",
+          "SHELTER"
+        ]
+      }
+    }
+  },
+  {
+    "id": 9,
+    "created_at": "2026-09-04T13:33:58Z",
+    "status": "Pending",
+    "original_message": "1 person need help. Needs: MEDICAL. Location: Location unavailable. Situation: trapped with 10 people at kaushambi",
+    "extracted_data": {
+      "source_type": "MEDICAL_SOS",
+      "location": {
+        "text": "Kaushambi, Uttar Pradesh",
+        "latitude": 25.361054,
+        "longitude": 81.4031707,
+        "geocoded": true,
+        "geocoded_address": "Kaushambi, Uttar Pradesh, India",
+        "coordinate_source": "demo_seed"
+      },
+      "people": {
+        "total": "1",
+        "children": null,
+        "elderly": null,
+        "pregnant": null,
+        "injured": null,
+        "missing": null,
+        "deceased": null,
+        "mobility_impaired": null
+      },
+      "situation": "1 person needs medical help and is trapped with 10 people at kaushambi.",
+      "request": {
+        "type": "MEDICAL",
+        "resources": []
+      },
+      "needs": {
+        "food": false,
+        "water": false,
+        "medicine": true,
+        "shelter": false,
+        "rescue": false,
+        "medical_transfer": false
+      },
+      "contact_info": [],
+      "original_message": "1 person need help. Needs: MEDICAL. Location: Location unavailable. Situation: trapped with 10 people at kaushambi",
+      "priority": {
+        "priority": "LOW",
+        "priority_score": 17,
+        "score_breakdown": {
+          "people_score": 5,
+          "vulnerability_score": 0,
+          "needs_score": 3,
+          "request_score": 8,
+          "flood_score": 0,
+          "location_score": 1
+        },
+        "inputs": {
+          "sos_people": 1,
+          "feature2_people": null,
+          "effective_people": 1,
+          "flood_severity": 0.0
+        },
+        "recommended_actions": [
+          "MEDICAL_SUPPLIES"
+        ]
+      }
+    }
+  },
+  {
+    "id": 10,
+    "created_at": "2026-09-04T14:13:33Z",
+    "status": "Pending",
+    "original_message": "2 people need help. Needs: WATER. Location: Location unavailable. Situation: We are 2 people in Maramon, Kerala. We are safe inside our house but we need drinking water. There is some flooding nearby but the situation is currently stable. Please send water supplies.",
+    "extracted_data": {
+      "source_type": "GROUP_SOS",
+      "location": {
+        "text": "Maramon, Kerala",
+        "latitude": 9.3395558,
+        "longitude": 76.6961305,
+        "geocoded": true,
+        "geocoded_address": "Maramon, Kerala, India",
+        "coordinate_source": "demo_seed"
+      },
+      "people": {
+        "total": "2",
+        "children": null,
+        "elderly": null,
+        "pregnant": null,
+        "injured": null,
+        "missing": null,
+        "deceased": null,
+        "mobility_impaired": null
+      },
+      "situation": "2 people in Maramon, Kerala are safe inside their house but need drinking water; there is some flooding nearby and the situation is currently stable.",
+      "request": {
+        "type": "SUPPLIES",
+        "resources": [
+          "WATER"
+        ]
+      },
+      "needs": {
+        "food": false,
+        "water": true,
+        "medicine": false,
+        "shelter": false,
+        "rescue": false,
+        "medical_transfer": false
+      },
+      "contact_info": [],
+      "original_message": "2 people need help. Needs: WATER. Location: Location unavailable. Situation: We are 2 people in Maramon, Kerala. We are safe inside our house but we need drinking water. There is some flooding nearby but the situation is currently stable. Please send water supplies.",
+      "priority": {
+        "priority": "LOW",
+        "priority_score": 12,
+        "score_breakdown": {
+          "people_score": 5,
+          "vulnerability_score": 0,
+          "needs_score": 3,
+          "request_score": 3,
+          "flood_score": 0,
+          "location_score": 1
+        },
+        "inputs": {
+          "sos_people": 2,
+          "feature2_people": null,
+          "effective_people": 2,
+          "flood_severity": 0.0
+        },
+        "recommended_actions": [
+          "WATER_SUPPLY"
+        ]
+      }
+    }
+  },
+  {
+    "id": 11,
+    "created_at": "2026-09-04T14:40:16Z",
+    "status": "Pending",
+    "original_message": "2 people need help. Needs: MEDICAL. Location: Location unavailable. Latitude: 28.6713156, Longitude: 77.3116578. Situation: URGENT! We are trapped in Supaul, Bihar due to rapidly rising flood water. 15 people need immediate rescue, including 4 children, 2 elderly people, 2 injured people, and 1 person with mobility difficulties. Water has entered the house and is continuing to rise. We have no safe way to evacuate. We urgently need rescue, drinking water, food, shelter, and medical assistance. Please send help immediately.",
+    "extracted_data": {
+      "source_type": "GROUP_SOS",
+      "location": {
+        "text": "Supaul, Bihar",
+        "latitude": 26.1233718,
+        "longitude": 86.6045134,
+        "geocoded": true,
+        "coordinate_source": "demo_seed",
+        "geocoded_address": "Supaul, Bihar, India"
+      },
+      "people": {
+        "total": "15",
+        "children": "4",
+        "elderly": "2",
+        "pregnant": null,
+        "injured": "2",
+        "missing": null,
+        "deceased": null,
+        "mobility_impaired": "1"
+      },
+      "situation": "15 people are trapped in Supaul, Bihar due to rapidly rising flood water. Water has entered the house and they have no safe way to evacuate.",
+      "request": {
+        "type": "RESCUE",
+        "resources": [
+          "RESCUE",
+          "DRINKING WATER",
+          "FOOD",
+          "SHELTER",
+          "MEDICAL ASSISTANCE"
+        ]
+      },
+      "needs": {
+        "food": true,
+        "water": true,
+        "medicine": true,
+        "shelter": true,
+        "rescue": true,
+        "medical_transfer": false
+      },
+      "contact_info": [],
+      "original_message": "2 people need help. Needs: MEDICAL. Location: Location unavailable. Latitude: 28.6713156, Longitude: 77.3116578. Situation: URGENT! We are trapped in Supaul, Bihar due to rapidly rising flood water. 15 people need immediate rescue, including 4 children, 2 elderly people, 2 injured people, and 1 person with mobility difficulties. Water has entered the house and is continuing to rise. We have no safe way to evacuate. We urgently need rescue, drinking water, food, shelter, and medical assistance. Please send help immediately.",
+      "priority": {
+        "priority": "MEDIUM",
+        "priority_score": 63,
+        "score_breakdown": {
+          "people_score": 15,
+          "vulnerability_score": 20,
+          "needs_score": 17,
+          "request_score": 6,
+          "flood_score": 0,
+          "location_score": 5
+        },
+        "inputs": {
+          "sos_people": 15,
+          "feature2_people": null,
+          "effective_people": 15,
+          "flood_severity": 0.0
+        },
+        "recommended_actions": [
+          "RESCUE",
+          "WATER_SUPPLY",
+          "FOOD_SUPPLY",
+          "MEDICAL_SUPPLIES",
+          "SHELTER"
+        ]
+      }
+    }
+  },
+  {
+    "id": 12,
+    "created_at": "2026-09-04T14:52:41Z",
+    "status": "Pending",
+    "original_message": "2 people need help. Needs: MEDICAL. Location: not provided. Situation: URGENT! We are trapped in Dibrugarh, Assam due to severe flooding. There are 12 people who need immediate rescue, including 3 children, 2 elderly people, 1 pregnant woman, and 2 injured people. Flood water has entered the building and is rising rapidly. We have no safe way to evacuate. We urgently need rescue, drinking water, food, shelter, and medical assistance. Please send a rescue team immediately.",
+    "extracted_data": {
+      "source_type": "GROUP_SOS",
+      "location": {
+        "text": "Dibrugarh, Assam",
+        "latitude": 27.4705449,
+        "longitude": 94.9124625,
+        "geocoded": true,
+        "geocoded_address": "Dibrugarh, Assam, India",
+        "coordinate_source": "demo_seed"
+      },
+      "people": {
+        "total": "12",
+        "children": "3",
+        "elderly": "2",
+        "pregnant": "1",
+        "injured": "2",
+        "missing": null,
+        "deceased": null,
+        "mobility_impaired": null
+      },
+      "situation": "12 people are trapped in Dibrugarh, Assam due to severe flooding; floodwater has entered the building and is rising rapidly.",
+      "request": {
+        "type": "MEDICAL",
+        "resources": [
+          "RESCUE",
+          "DRINKING WATER",
+          "FOOD",
+          "SHELTER",
+          "MEDICAL ASSISTANCE"
+        ]
+      },
+      "needs": {
+        "food": true,
+        "water": true,
+        "medicine": true,
+        "shelter": true,
+        "rescue": true,
+        "medical_transfer": false
+      },
+      "contact_info": [],
+      "original_message": "2 people need help. Needs: MEDICAL. Location: not provided. Situation: URGENT! We are trapped in Dibrugarh, Assam due to severe flooding. There are 12 people who need immediate rescue, including 3 children, 2 elderly people, 1 pregnant woman, and 2 injured people. Flood water has entered the building and is rising rapidly. We have no safe way to evacuate. We urgently need rescue, drinking water, food, shelter, and medical assistance. Please send a rescue team immediately.",
+      "priority": {
+        "priority": "MEDIUM",
+        "priority_score": 61,
+        "score_breakdown": {
+          "people_score": 15,
+          "vulnerability_score": 20,
+          "needs_score": 17,
+          "request_score": 8,
+          "flood_score": 0,
+          "location_score": 1
+        },
+        "inputs": {
+          "sos_people": 12,
+          "feature2_people": null,
+          "effective_people": 12,
+          "flood_severity": 0.0
+        },
+        "recommended_actions": [
+          "RESCUE",
+          "WATER_SUPPLY",
+          "FOOD_SUPPLY",
           "MEDICAL_SUPPLIES",
           "SHELTER"
         ]
