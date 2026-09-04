@@ -12,6 +12,9 @@ const navItems = [
   { label: 'Safe Route', href: '/safe-route', icon: 'Navigation' },
   { label: 'Risk Analysis', href: '/risk-analysis', icon: 'Activity' },
   { label: 'Budget', href: '/budget', icon: 'WalletCards' },
+  { label: 'Rescue', href: '/rescue', icon: 'Users' },
+  { label: 'Shelter Allocation', href: '/shelter-allocation', icon: 'Home' },
+  { label: 'Relief', href: '/relief', icon: 'Zap' },
 ]
 
 const getPageTitle = (pathname: string | null) => {
@@ -23,6 +26,9 @@ const getPageTitle = (pathname: string | null) => {
     '/safe-route': 'Safe Route Planner',
     '/risk-analysis': 'Risk Analysis',
     '/budget': 'Budget & Resources',
+    '/rescue': 'Rescue Resources',
+    '/shelter-allocation': 'Shelter Allocation',
+    '/relief': 'Relief Planning',
   }
   return labels[pathname] ?? 'FloodGuard'
 }
@@ -47,7 +53,7 @@ export default function MainShell({ children }: { children: React.ReactNode }) {
 
           <nav className="space-y-1.5">
             {navItems.map((item) => {
-              const active = pathname === item.href
+              const active = pathname === item.href || pathname?.startsWith(item.href + '/')
               return (
                 <Link
                   key={item.href}
