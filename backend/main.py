@@ -5,6 +5,11 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 from backend.database import Base, engine, get_db
 from backend.models import SOSRequest as SOSRequestModel
+from backend.operations.allocator import run_module5
+from backend.operations.shelter_allocator import run_module7
+from backend.operations.relief_planner import run_module8
+from backend.operations.adapter import priority_result_to_incident_row
+from backend.operations.db_client import supabase
 import cv2
 import numpy as np
 import json
@@ -321,8 +326,17 @@ async def analyze_sos(
 
         # Add Feature 4 result to the extracted data
         result["priority"] = priority_result
-
-
+        
+        try:
+            location_text = result.get("location", {}).get("text")
+            incident_row = priority_result_to_incident_row(
+                priority_result, location_text=location_text
+            )
+            supabase.table("rescue_incidents").upsert(incident_row).execute()
+        except Exception as log_err:
+            print(f"[WARN] Failed to save incident to rescue_incidents: {log_err}")
+            
+            
         # ========================================================
         # SAVE SOS TO DATABASE
         # ========================================================
@@ -429,7 +443,16 @@ async def calculate_emergency_priority(
             ),
             flood_severity=request.flood_severity
         )
-
+        try:
+            location_text = request.sos_data.get("location", {}).get("text")
+            incident_row = priority_result_to_incident_row(
+                result, location_text=location_text
+            )
+            supabase.table("rescue_incidents").upsert(incident_row).execute()
+        except Exception as log_err:
+            print(f"[WARN] Failed to save incident to rescue_incidents: {log_err}")
+            
+        
         return result
 
     except Exception as e:
@@ -2623,3 +2646,73 @@ async def safe_route(
                 )
         }
     }
+# ============================================================
+# MODULE 5 / 7 / 8 — OPERATIONAL OPTIMIZATION
+# ============================================================
+
+@app.post("/api/module5/run")
+async def trigger_module5():
+    try:
+        assignments = run_module5()
+        return {"success": True, "assignments": assignments, "count": len(assignments)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Module 5 failed: {str(e)}")
+
+
+@app.post("/api/module7/run")
+async def trigger_module7():
+    try:
+        assignments = run_module7()
+        return {"success": True, "assignments": assignments, "count": len(assignments)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Module 7 failed: {str(e)}")
+
+
+@app.post("/api/module8/run")
+async def trigger_module8():
+    try:
+        assessments = run_module8()
+        return {"success": True, "assessments": assessments, "count": len(assessments)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Module 8 failed: {str(e)}")
+
+# ============================================================
+# MODULE 5 / 7 / 8 — LIVE DATA READS (for frontend dashboards)
+# ============================================================
+
+@app.get("/api/rescue-resources")
+async def get_rescue_resources():
+    try:
+        incidents = supabase.table("rescue_incidents").select("*").execute().data
+        resources = supabase.table("rescue_resources").select("*").execute().data
+        assignments = supabase.table("rescue_assignments").select("*").execute().data
+        return {"incidents": incidents, "resources": resources, "assignments": assignments}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load rescue data: {str(e)}")
+
+
+@app.get("/api/shelters-live")
+async def get_shelters_live():
+    try:
+        shelters = supabase.table("shelters").select("*").execute().data
+        return {"shelters": shelters}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load shelter data: {str(e)}")
+
+
+@app.get("/api/relief-status")
+async def get_relief_status():
+    try:
+        assessments = supabase.table("relief_assessments").select("*").execute().data
+        budgets = supabase.table("budgets").select("*").execute().data
+        expenses = supabase.table("expenses").select("*").execute().data
+        total_allocated = sum(float(b["total_allocated"]) for b in budgets)
+        total_spent = sum(float(e["amount"]) for e in expenses)
+        return {
+            "assessments": assessments,
+            "allocated": total_allocated,
+            "spent": total_spent,
+            "remaining": total_allocated - total_spent,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load relief data: {str(e)}")
