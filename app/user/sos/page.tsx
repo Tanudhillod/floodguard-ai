@@ -22,7 +22,7 @@ import {
 } from "lucide-react"
 
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
+  process.env.NEXT_PUBLIC_FLOODGAURD_API_URL || "http://127.0.0.1:8000"
 
 type Need =
   | "RESCUE"
@@ -1069,7 +1069,7 @@ function SummaryRow({
           {label}
         </div>
 
-        <div className="mt-1 break-words text-sm font-medium leading-5 text-[#0f2742]">
+        <div className="mt-1 wrap-break-word text-sm font-medium leading-5 text-[#0f2742]">
           {value}
         </div>
 
@@ -1152,7 +1152,7 @@ function StatusStep({
     <div className="relative flex gap-3">
 
       {!last && (
-        <div className="absolute left-[7px] top-4 h-[calc(100%+8px)] w-px bg-slate-200" />
+        <div className="absolute left-1.75 top-4 h-[calc(100%+8px)] w-px bg-slate-200" />
       )}
 
       <div

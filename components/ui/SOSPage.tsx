@@ -23,10 +23,10 @@ import {
 } from "@/components/ui/shared"
 
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
+  process.env.NEXT_PUBLIC_FLOODGAURD_API_URL || "http://127.0.0.1:8000"
 
 type SOSRequest = {
-  id: number
+  id: string
   created_at: string
   status: string
   original_message: string
@@ -35,6 +35,10 @@ type SOSRequest = {
 
 type ExtractedData = {
   source_type?: string
+  priority?: {
+    priority_level?: string
+    priority_score?: number
+  }
 
   location?: {
     text?: string | null
@@ -274,7 +278,7 @@ export default function SOSPage() {
 
               {/* TABLE HEADER */}
 
-              <div className="grid min-w-[820px] grid-cols-[1.1fr_1.4fr_.6fr_.8fr_1.4fr] gap-4 border-b border-slate-200 px-4 pb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+              <div className="grid min-w-205 grid-cols-[1.1fr_1.4fr_.6fr_.8fr_1.4fr] gap-4 border-b border-slate-200 px-4 pb-3 text-[11px] font-semibold uppercase tracking-widest text-slate-500">
 
                 <span>Priority / ID</span>
                 <span>Location</span>
@@ -287,7 +291,7 @@ export default function SOSPage() {
 
               {/* REQUESTS */}
 
-              <div className="min-w-[820px] divide-y divide-slate-200">
+              <div className="min-w-205 divide-y divide-slate-200">
 
                 {requests.map((request) => {
 
@@ -297,6 +301,7 @@ export default function SOSPage() {
                     )
 
                   const priority =
+                    extracted.priority?.priority_level ||
                     getPriority(extracted)
 
                   const location =
@@ -343,7 +348,7 @@ export default function SOSPage() {
                         <div className="flex items-center gap-2">
 
                           <span className="text-sm font-semibold text-[#102A43]">
-                            SOS-{request.id}
+                            {request.id}
                           </span>
 
                           <StatusBadge
@@ -395,10 +400,9 @@ export default function SOSPage() {
                         <StatusBadge
                           label={request.status}
                           tone={
-                            request.status === "Pending"
+                            request.status === "PENDING"
                               ? "warning"
-                              : request.status ===
-                                  "Rescue Assigned"
+                              : request.status === "ASSIGNED"
                                 ? "medium"
                                 : "good"
                           }
@@ -822,7 +826,7 @@ function SOSDetailsModal({
 
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
 
-                <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-600">
+                <p className="whitespace-pre-wrap wrap-break-word text-sm leading-6 text-slate-600">
                   {originalMessage}
                 </p>
 

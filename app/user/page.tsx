@@ -20,7 +20,7 @@ import {
 } from "lucide-react"
 
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
+  process.env.NEXT_PUBLIC_FLOODGAURD_API_URL || "http://127.0.0.1:8000"
 
 type ExtractedData = {
   source_type?: string | null
@@ -1079,7 +1079,7 @@ function RequestDetails({
 
   <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
 
-    <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-600">
+    <p className="whitespace-pre-wrap wrap-break-word text-sm leading-6 text-slate-600">
       {request.original_message}
     </p>
 

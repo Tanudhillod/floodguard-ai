@@ -463,7 +463,7 @@ export default function DronePage() {
             UPLOAD PANEL
         ================================================== */}
 
-        <Panel className="flex min-h-[360px] flex-col items-center justify-center p-6 text-center">
+        <Panel className="flex min-h-90 flex-col items-center justify-center p-6 text-center">
 
           <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-[#2563eb]">
 
@@ -665,7 +665,7 @@ export default function DronePage() {
             icon="Radar"
           />
 
-          <div className="relative mt-3 h-[260px] overflow-hidden rounded-lg border border-[#173B5E] bg-[#0B1F33]">
+          <div className="relative mt-3 h-65 overflow-hidden rounded-lg border border-[#173B5E] bg-[#0B1F33]">
 
             {resultImage ? (
 
@@ -932,7 +932,7 @@ export default function DronePage() {
 
                   {/* RIGHT */}
 
-                  <div className="grid grid-cols-3 gap-3 lg:min-w-[420px]">
+                  <div className="grid grid-cols-3 gap-3 lg:min-w-105">
 
                     {/* PEOPLE */}
 

@@ -2,6 +2,11 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, Form, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
+from backend.operations.allocator import run_module5
+from backend.operations.shelter_allocator import run_module7
+from backend.operations.relief_planner import run_module8
+from backend.operations.adapter import priority_result_to_incident_row
+
 import cv2
 import numpy as np
 import json
@@ -18,6 +23,7 @@ from dotenv import load_dotenv
 
 from backend.services.detector import DroneDetector
 from backend.supabase_client import supabase
+from backend.operations.db_client import supabase as operations_supabase
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 
@@ -106,7 +112,11 @@ SOS_STORE = load_sos_store()
 
 SOS_COUNTER = (
     max(
-        [int(item.get("id", 0)) for item in SOS_STORE]
+        [
+            int(item.get("id", 0))
+            for item in SOS_STORE
+            if str(item.get("id", "")).isdigit()
+        ]
         or [0]
     )
     + 1
@@ -303,6 +313,37 @@ def _extract_location_from_filename(filename: str):
         "location_part": location_part,
         "source": "filename"
     }
+
+
+def _extract_explicit_coordinates(message: str):
+    if not message:
+        return None
+
+    patterns = [
+        r"(?i)\blocation\s*[:=-]\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)",
+        r"(?i)\bcoordinates?\s*[:=-]\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)",
+        r"(?<!\d)(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)(?!\d)",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, message)
+
+        if not match:
+            continue
+
+        try:
+            latitude = float(match.group(1))
+            longitude = float(match.group(2))
+        except (TypeError, ValueError):
+            continue
+
+        if -90 <= latitude <= 90 and -180 <= longitude <= 180:
+            return {
+                "latitude": latitude,
+                "longitude": longitude,
+            }
+
+    return None
 
 
 # ============================================================
@@ -1034,6 +1075,25 @@ async def analyze_sos(request: SOSRequest):
         # FEATURE 3 — SOS INTELLIGENCE
         # --------------------------------------------------------
         result = extract_sos_llm(request.message)
+        explicit_coordinates = _extract_explicit_coordinates(
+            request.message
+        )
+
+        if explicit_coordinates:
+            if not isinstance(result.get("location"), dict):
+                result["location"] = {}
+
+            result["location"]["latitude"] = (
+                explicit_coordinates["latitude"]
+            )
+            result["location"]["longitude"] = (
+                explicit_coordinates["longitude"]
+            )
+
+        print(
+            "📍 SOS ROUTING LOCATION:",
+            result.get("location")
+        )
 
         # Convert the Lyzr location (e.g. Dibrugarh, Assam) to coordinates.
         # No browser/device GPS is used.
@@ -1048,30 +1108,70 @@ async def analyze_sos(request: SOSRequest):
             flood_severity=0.0
         )
 
-        result["priority"] = priority_result
+        location = result.get("location", {})
+        priority_result.update({
+            "incident_id": f"INC{SOS_COUNTER}",
+            "people": priority_result["inputs"]["effective_people"],
+            "latitude": location.get("latitude"),
+            "longitude": location.get("longitude"),
+            "status": "WAITING_FOR_RESCUE",
+        })
+        SOS_COUNTER += 1
 
-        # --------------------------------------------------------
-        # STORE SOS LOCALLY
-        # --------------------------------------------------------
-        # We intentionally do not use Supabase for SOS.
-        # Supabase is still used by the drone feature.
+        result["priority"] = priority_result
+        try:
+            location_text = result.get("location", {}).get("text")
+            incident_row = priority_result_to_incident_row(
+                priority_result, location_text=location_text
+            )
+            incident_columns = {
+                "incident_id", "location_text", "latitude", "longitude",
+                "people_count", "priority_score", "priority_level", "status",
+                "people_remaining"
+            }
+            operations_supabase.table("rescue_incidents").upsert(
+                {
+                    key: value
+                    for key, value in incident_row.items()
+                    if key in incident_columns
+                }
+            ).execute()
+        except Exception as log_err:
+            raise RuntimeError(
+                f"Failed to save incident to rescue_incidents: {log_err}"
+            )
+
+        # Allocate boats immediately using priority score and remaining capacity.
+        run_module5()
+
+        incident_id = priority_result["incident_id"]
+        assignments = (
+            operations_supabase.table("rescue_assignments")
+            .select("*")
+            .eq("incident_id", incident_id)
+            .execute()
+            .data
+        )
+        incident = (
+            operations_supabase.table("rescue_incidents")
+            .select("*")
+            .eq("incident_id", incident_id)
+            .single()
+            .execute()
+            .data
+        )
 
         sos_record = {
-            "id": SOS_COUNTER,
-            "created_at": time.strftime(
-                "%Y-%m-%dT%H:%M:%SZ",
-                time.gmtime()
-            ),
-            "status": "Pending",
+            "id": incident_id,
+            "created_at": incident["created_at"],
+            "status": "ASSIGNED" if assignments else "PENDING",
             "original_message": request.message,
-            "extracted_data": result
+            "extracted_data": result,
+            "assignments": assignments,
         }
 
         SOS_STORE.append(sos_record)
-
         save_sos_store(SOS_STORE)
-
-        SOS_COUNTER += 1
 
         return sos_record
 
@@ -1120,8 +1220,72 @@ def get_sos_requests():
         if changed:
             save_sos_store(SOS_STORE)
 
+        incidents = (
+            operations_supabase.table("rescue_incidents")
+            .select("*")
+            .order("created_at", desc=True)
+            .execute()
+            .data
+        )
+        requests = []
+        stored_sos = {
+            str(item.get("id")): item
+            for item in SOS_STORE
+        }
+        for incident in incidents:
+            assignments = (
+                operations_supabase.table("rescue_assignments")
+                .select("*")
+                .eq("incident_id", incident["incident_id"])
+                .execute()
+                .data
+            )
+
+            stored_request = stored_sos.get(
+                str(incident["incident_id"]),
+                {}
+            )
+            extracted_data = stored_request.get(
+                "extracted_data",
+                {}
+            )
+            if isinstance(extracted_data, str):
+                try:
+                    extracted_data = json.loads(extracted_data)
+                except (json.JSONDecodeError, TypeError):
+                    extracted_data = {}
+            if not isinstance(extracted_data, dict):
+                extracted_data = {}
+
+            extracted_data["location"] = {
+                **extracted_data.get("location", {}),
+                "text": incident.get("location_text"),
+                "latitude": incident.get("latitude"),
+                "longitude": incident.get("longitude"),
+            }
+            extracted_data["people"] = {
+                **extracted_data.get("people", {}),
+                "total": incident.get("people_count"),
+            }
+            extracted_data["priority"] = {
+                **extracted_data.get("priority", {}),
+                "priority_score": incident.get("priority_score"),
+                "priority_level": incident.get("priority_level"),
+            }
+
+            requests.append({
+                "id": incident["incident_id"],
+                "created_at": incident["created_at"],
+                "status": "ASSIGNED" if assignments else "PENDING",
+                "original_message": stored_request.get(
+                    "original_message",
+                    extracted_data.get("original_message", "")
+                ),
+                "extracted_data": extracted_data,
+                "assignments": assignments,
+            })
         return {
-            "requests": list(reversed(SOS_STORE))
+            "requests": requests
         }
 
     except Exception as e:
@@ -1149,7 +1313,27 @@ async def calculate_emergency_priority(
             ),
             flood_severity=request.flood_severity
         )
-
+        try:
+            location_text = request.sos_data.get("location", {}).get("text")
+            incident_row = priority_result_to_incident_row(
+                result, location_text=location_text
+            )
+            incident_columns = {
+                "incident_id", "location_text", "latitude", "longitude",
+                "people_count", "priority_score", "priority_level", "status",
+                "people_remaining"
+            }
+            operations_supabase.table("rescue_incidents").upsert(
+                {
+                    key: value
+                    for key, value in incident_row.items()
+                    if key in incident_columns
+                }
+            ).execute()
+        except Exception as log_err:
+            print(f"[WARN] Failed to save incident to rescue_incidents: {log_err}")
+            
+        
         return result
 
     except Exception as e:
@@ -2013,272 +2197,74 @@ def calculate_distance_km(
 
 
 # ============================================================
-# EXTRACT JSON FROM SWYTCHCODE OUTPUT
+# FIND SHELTERS IN THE FLOODGUARD DATABASE
 # ============================================================
 
-def _extract_json_object(text):
-
-    if not text:
-        return None
-
-    text = text.strip()
-
-    start = text.find("{")
-
-    if start == -1:
-        return None
-
-    end = text.rfind("}")
-
-    if end == -1:
-        return None
-
-    try:
-        return json.loads(
-            text[start:end + 1]
-        )
-
-    except json.JSONDecodeError:
-        return None
-
-
-# ============================================================
-# FIND SHELTERS THROUGH SWYTCHCODE
-# ============================================================
-
-def _find_shelters_with_swytchcode(
+def _get_shelters_from_floodguard_database(
     latitude: float,
     longitude: float
 ):
-
-    if not GOOGLE_MAPS_API_KEY:
-
-        raise HTTPException(
-            status_code=500,
-            detail=(
-                "GOOGLE_MAPS_API_KEY is not configured. "
-                "Check your .env file and restart FastAPI."
-            )
-        )
-
-    query = (
-        f"emergency shelters near "
-        f"{latitude},{longitude}"
-    )
-
-    command = [
-
-        SWY_PATH,
-
-        "exec",
-
-        "places.placessearchtext.create",
-
-        "--input",
-        f"textQuery={query}",
-
-        "--input",
-        f"key={GOOGLE_MAPS_API_KEY}",
-
-        "--header",
-        (
-            "X-Goog-FieldMask="
-            "places.displayName,"
-            "places.id,"
-            "places.formattedAddress,"
-            "places.location"
-        ),
-
-        "--json"
-    ]
-
     try:
-
-        result = subprocess.run(
-            command,
-            capture_output=True,
-            text=False,
-            timeout=30
+        shelter_rows = (
+            operations_supabase
+            .table("shelters")
+            .select("*")
+            .execute()
+            .data
         )
-
-    except subprocess.TimeoutExpired:
-
-        raise HTTPException(
-            status_code=504,
-            detail="Swytchcode shelter search timed out."
-        )
-
-    except FileNotFoundError:
-
-        raise HTTPException(
-            status_code=500,
-            detail=(
-                "Swytchcode CLI was not found. "
-                f"Expected path: {SWY_PATH}"
-            )
-        )
-
     except Exception as e:
-
         raise HTTPException(
             status_code=500,
-            detail=(
-                f"Failed to execute Swytchcode: {str(e)}"
-            )
-        )
-
-    stdout = (
-        (result.stdout or b"")
-        .decode(
-            "utf-8",
-            errors="replace"
-        )
-        .strip()
-    )
-
-    stderr = (
-        (result.stderr or b"")
-        .decode(
-            "utf-8",
-            errors="replace"
-        )
-        .strip()
-    )
-
-    if result.returncode != 0:
-
-        raise HTTPException(
-            status_code=502,
-            detail={
-                "message": "Swytchcode shelter search failed.",
-                "error": stderr or stdout
-            }
-        )
-
-    response_data = _extract_json_object(
-        stdout
-    )
-
-    if not response_data:
-
-        raise HTTPException(
-            status_code=502,
-            detail={
-                "message": (
-                    "Could not parse Swytchcode shelter response."
-                ),
-                "raw_response": stdout[:2000]
-            }
-        )
-
-    data = response_data.get(
-        "data",
-        response_data
-    )
-
-    places = []
-
-    if isinstance(data, dict):
-
-        places = data.get(
-            "places",
-            []
+            detail=f"Failed to load shelter data: {str(e)}"
         )
 
     shelters = []
 
-    for place in places:
-
-        if not isinstance(place, dict):
-            continue
-
-        display_name = place.get(
-            "displayName",
-            {}
-        )
-
-        location = place.get(
-            "location",
-            {}
-        )
-
-        if isinstance(display_name, dict):
-
-            name = display_name.get(
-                "text"
-            )
-
-        else:
-
-            name = display_name
-
-        if isinstance(location, dict):
-
-            place_latitude = location.get(
-                "latitude"
-            )
-
-            place_longitude = location.get(
-                "longitude"
-            )
-
-        else:
-
-            place_latitude = None
-            place_longitude = None
-
-        if (
-            place_latitude is None
-            or
-            place_longitude is None
-        ):
+    for shelter in shelter_rows or []:
+        if not isinstance(shelter, dict):
             continue
 
         try:
+            shelter_latitude = float(shelter.get("latitude"))
+            shelter_longitude = float(shelter.get("longitude"))
+        except (TypeError, ValueError):
+            continue
 
-            place_latitude = float(
-                place_latitude
-            )
-
-            place_longitude = float(
-                place_longitude
-            )
-
-        except (
-            TypeError,
-            ValueError
+        if (
+            not math.isfinite(shelter_latitude)
+            or not math.isfinite(shelter_longitude)
+            or not -90 <= shelter_latitude <= 90
+            or not -180 <= shelter_longitude <= 180
         ):
+            continue
 
+        status = str(shelter.get("status") or "").strip().upper()
+        if status in {"FULL", "CLOSED", "UNAVAILABLE"}:
+            continue
+
+        try:
+            capacity_remaining = float(shelter.get("capacity_remaining"))
+        except (TypeError, ValueError):
+            continue
+
+        if not math.isfinite(capacity_remaining) or capacity_remaining <= 0:
             continue
 
         distance_km = calculate_distance_km(
             latitude,
             longitude,
-            place_latitude,
-            place_longitude
+            shelter_latitude,
+            shelter_longitude
         )
 
         shelters.append({
-
-            "id": place.get(
-                "id"
-            ),
-
-            "name": name or "Emergency Shelter",
-
-            "address": place.get(
-                "formattedAddress"
-            ) or "Address unavailable",
-
-            "latitude": place_latitude,
-
-            "longitude": place_longitude,
-
-            "distance_km": round(
-                distance_km,
-                2
-            )
-
+            **shelter,
+            "id": shelter.get("shelter_id"),
+            "name": shelter.get("name") or "Emergency Shelter",
+            "address": shelter.get("location_text") or "Address unavailable",
+            "latitude": shelter_latitude,
+            "longitude": shelter_longitude,
+            "distance_km": round(distance_km, 2),
         })
 
     # --------------------------------------------------------
@@ -2320,7 +2306,7 @@ async def find_shelters(
             detail="Invalid longitude."
         )
 
-    shelters = _find_shelters_with_swytchcode(
+    shelters = _get_shelters_from_floodguard_database(
         latitude,
         longitude
     )
@@ -2330,8 +2316,7 @@ async def find_shelters(
         "success": True,
 
         "source": (
-            "FloodGuard → Swytchcode → "
-            "Google Maps Places API"
+            "FloodGuard Supabase shelters table"
         ),
 
         "origin": {
@@ -3403,7 +3388,7 @@ async def safe_route(
     # 1. Find real nearby shelters
     # --------------------------------------------------------
 
-    shelters = _find_shelters_with_swytchcode(
+    shelters = _get_shelters_from_floodguard_database(
         latitude,
         longitude
     )
@@ -4138,7 +4123,7 @@ async def safe_route(
         "data_sources": {
 
             "shelters":
-                "Swytchcode → Google Maps Places API",
+                "FloodGuard Supabase shelters table",
 
             "route":
                 recommended.get(
@@ -4151,3 +4136,79 @@ async def safe_route(
                 )
         }
     }
+# ============================================================
+# MODULE 5 / 7 / 8 — OPERATIONAL OPTIMIZATION
+# ============================================================
+
+@app.post("/api/module5/run")
+async def trigger_module5():
+    try:
+        assignments = run_module5()
+        return {"success": True, "assignments": assignments, "count": len(assignments)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Module 5 failed: {str(e)}")
+
+
+@app.post("/api/module7/run")
+async def trigger_module7():
+    try:
+        assignments = run_module7()
+        return {"success": True, "assignments": assignments, "count": len(assignments)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Module 7 failed: {str(e)}")
+
+
+@app.post("/api/module8/run")
+async def trigger_module8():
+    try:
+        assessments = run_module8()
+        return {"success": True, "assessments": assessments, "count": len(assessments)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Module 8 failed: {str(e)}")
+
+# ============================================================
+# MODULE 5 / 7 / 8 — LIVE DATA READS (for frontend dashboards)
+# ============================================================
+
+@app.get("/api/rescue-resources")
+async def get_rescue_resources():
+    try:
+        incidents = operations_supabase.table("rescue_incidents").select("*").execute().data
+        resources = operations_supabase.table("rescue_resources").select("*").execute().data
+        assignments = operations_supabase.table("rescue_assignments").select("*").execute().data
+        return {"incidents": incidents, "resources": resources, "assignments": assignments}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load rescue data: {str(e)}")
+
+
+@app.get("/api/shelters-live")
+async def get_shelters_live():
+    try:
+        shelters = operations_supabase.table("shelters").select("*").execute().data
+        return {"shelters": shelters}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load shelter data: {str(e)}")
+
+
+@app.get("/api/relief-status")
+async def get_relief_status():
+    try:
+        assessments = (
+            operations_supabase.table("relief_status_view")
+            .select("*")
+            .order("shelter_id")
+            .execute()
+            .data
+        )
+        budgets = operations_supabase.table("budgets").select("*").execute().data
+        expenses = operations_supabase.table("expenses").select("*").execute().data
+        total_allocated = sum(float(b["total_allocated"]) for b in budgets)
+        total_spent = sum(float(e["amount"]) for e in expenses)
+        return {
+            "assessments": assessments,
+            "allocated": total_allocated,
+            "spent": total_spent,
+            "remaining": total_allocated - total_spent,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load relief data: {str(e)}")
