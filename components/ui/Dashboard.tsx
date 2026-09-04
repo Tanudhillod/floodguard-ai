@@ -12,17 +12,12 @@ import {
 } from "recharts"
 import {
   Activity,
-  AlertCircle,
-  Bell,
   CheckCircle2,
   Droplet,
   Gauge,
-  Home,
   Leaf,
-  MapPin,
   Megaphone,
   Radio,
-  Shield,
   Thermometer,
   Wind,
   Zap,
@@ -54,25 +49,6 @@ const SENSOR_HISTORY = [
   { time: "14:00", waterLevel: 2.2, rainfall: 17, soilMoisture: 74, temperature: 28.1, movement: 0.11, waterFlow: 3.0 },
   { time: "16:00", waterLevel: 2.28, rainfall: 21, soilMoisture: 76, temperature: 28.4, movement: 0.11, waterFlow: 3.2 },
   { time: "18:00", waterLevel: 2.35, rainfall: 24.7, soilMoisture: 78, temperature: 28.5, movement: 0.12, waterFlow: 3.4 },
-]
-
-const SOS_REQUESTS = [
-  { id: "SOS-1024", location: "Yamuna Bank", people: 5, severity: "CRITICAL", status: "PENDING", time: "2 min ago" },
-  { id: "SOS-1025", location: "Laxmi Nagar", people: 2, severity: "HIGH", status: "RESCUE ASSIGNED", time: "5 min ago" },
-  { id: "SOS-1026", location: "Mayur Vihar", people: 1, severity: "MEDIUM", status: "PENDING", time: "8 min ago" },
-  { id: "SOS-1027", location: "Shahdara", people: 7, severity: "HIGH", status: "RESPONDING", time: "11 min ago" },
-]
-
-const SHELTERS = [
-  { name: "Community Shelter A", location: "Mayur Vihar", occupied: 372, capacity: 500, status: "OPEN" },
-  { name: "Relief Center B", location: "Laxmi Nagar", occupied: 284, capacity: 300, status: "NEAR CAPACITY" },
-  { name: "School Shelter C", location: "Shahdara", occupied: 250, capacity: 250, status: "FULL" },
-]
-
-const ALERTS = [
-  { severity: "CRITICAL", title: "Rapid water-level increase detected", description: "Yamuna Bank · Deploy rescue team to affected zone.", time: "2 min ago" },
-  { severity: "HIGH", title: "Heavy rainfall detected", description: "East Delhi sensor grid · Review flood-risk assessment.", time: "8 min ago" },
-  { severity: "WARNING", title: "Shelter approaching capacity", description: "Community Shelter A · Prepare overflow shelter B.", time: "14 min ago" },
 ]
 
 type SensorKey = keyof typeof SENSOR_DATA
@@ -155,50 +131,6 @@ export default function Dashboard() {
               Broadcast Alert
             </button>
           </div>
-        </section>
-
-        {/* KPI ROW */}
-        <section className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <StatCard
-            icon={<Droplet />}
-            label="Flood Risk"
-            value={`${floodRiskData.probability}%`}
-            badge="HIGH RISK"
-            badgeClass="bg-red-50 text-red-600"
-            valueClass={riskColor}
-          />
-          <StatCard
-            icon={<AlertCircle />}
-            label="Active SOS"
-            value="34"
-            badge="8 CRITICAL"
-            badgeClass="bg-orange-50 text-orange-600"
-            valueClass="text-orange-500"
-          />
-          <StatCard
-            icon={<Shield />}
-            label="Rescue Teams"
-            value="08"
-            badge="6 RESPONDING"
-            badgeClass="bg-green-50 text-green-600"
-            valueClass="text-green-600"
-          />
-          <StatCard
-            icon={<Home />}
-            label="Available Shelters"
-            value="12"
-            badge="3 NEAR CAPACITY"
-            badgeClass="bg-slate-100 text-slate-600"
-            valueClass="text-slate-800"
-          />
-          <StatCard
-            icon={<Bell />}
-            label="Critical Alerts"
-            value="05"
-            badge="+2 THIS HOUR"
-            badgeClass="bg-orange-50 text-orange-600"
-            valueClass="text-orange-500"
-          />
         </section>
 
         {/* HEATMAP + MODEL */}
@@ -315,115 +247,6 @@ export default function Dashboard() {
           </section>
         </section>
 
-        {/* SOS + SHELTERS */}
-        <section className="mb-5 grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.9fr)]">
-
-          <section className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <div className="text-[10px] font-bold tracking-[0.16em] text-slate-400">
-                  PRIORITY QUEUE
-                </div>
-                <h2 className="mt-1 text-lg font-bold text-slate-700">
-                  Emergency Requests
-                </h2>
-              </div>
-              <button className="text-xs font-medium text-slate-500 hover:text-blue-600">
-                View all
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              {SOS_REQUESTS.map((request) => (
-                <div
-                  key={request.id}
-                  className="flex flex-col gap-2 rounded-lg border border-slate-200 p-3 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-bold text-slate-700">
-                        {request.id}
-                      </span>
-                      <span className={`rounded border px-1.5 py-0.5 text-[8px] font-bold ${severityClass(request.severity)}`}>
-                        {request.severity}
-                      </span>
-                    </div>
-                    <div className="mt-1 flex items-center gap-1 text-xs text-slate-500">
-                      <MapPin className="h-3 w-3" />
-                      {request.location}
-                    </div>
-                  </div>
-
-                  <div className="flex shrink-0 items-center gap-4 text-xs text-slate-500">
-                    <span>{request.people} people</span>
-                    <span>{request.time}</span>
-                    <span className="rounded border border-slate-200 px-2 py-1 text-[8px] font-bold text-slate-500">
-                      {request.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-4">
-              <div className="text-[10px] font-bold tracking-[0.16em] text-slate-400">
-                SHELTER STATUS
-              </div>
-              <h2 className="mt-1 text-lg font-bold text-slate-700">
-                Network Summary
-              </h2>
-            </div>
-
-            <div className="space-y-3">
-              {SHELTERS.map((shelter) => {
-                const percentage = Math.round((shelter.occupied / shelter.capacity) * 100)
-                const barClass =
-                  percentage >= 100
-                    ? "bg-red-500"
-                    : percentage >= 90
-                      ? "bg-orange-500"
-                      : "bg-green-600"
-
-                return (
-                  <div key={shelter.name} className="rounded-lg border border-slate-200 p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="text-sm font-semibold text-slate-700">
-                          {shelter.name}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-400">
-                          {shelter.location}
-                        </div>
-                      </div>
-                      <span className={`rounded px-2 py-1 text-[8px] font-bold ${shelterClass(shelter.status)}`}>
-                        {shelter.status}
-                      </span>
-                    </div>
-
-                    <div className="mt-3 flex items-center justify-between text-xs">
-                      <span className="text-slate-400">
-                        {shelter.occupied}/{shelter.capacity}
-                      </span>
-                      <span className="font-medium text-slate-500">
-                        {percentage}% occupied
-                      </span>
-                    </div>
-
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
-                      <div
-                        className={`h-full rounded-full ${barClass}`}
-                        style={{ width: `${Math.min(percentage, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </section>
-        </section>
-
         {/* SENSOR CARDS */}
         <section className="mb-5">
           <div className="mb-3">
@@ -508,66 +331,6 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* ALERTS + READINESS */}
-        <section className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.9fr)]">
-          <section className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                <Bell className="h-4 w-4" />
-              </div>
-              <div>
-                <div className="text-[10px] font-bold tracking-[0.16em] text-slate-400">
-                  RECENT ALERTS
-                </div>
-                <h2 className="mt-1 text-lg font-bold text-slate-700">
-                  What needs attention
-                </h2>
-              </div>
-            </div>
-
-            <div className="divide-y divide-slate-100">
-              {ALERTS.map((alert) => (
-                <div key={alert.title} className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
-                  <div className="flex min-w-0 gap-3">
-                    <span className={`mt-0.5 rounded px-2 py-1 text-[8px] font-bold ${severityClass(alert.severity)}`}>
-                      {alert.severity}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-700">{alert.title}</p>
-                      <p className="mt-1 text-xs text-slate-400">{alert.description}</p>
-                    </div>
-                  </div>
-                  <span className="shrink-0 text-[10px] text-slate-400">{alert.time}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                <Shield className="h-4 w-4" />
-              </div>
-              <div>
-                <div className="text-[10px] font-bold tracking-[0.16em] text-slate-400">
-                  OPERATIONAL READINESS
-                </div>
-                <h2 className="mt-1 text-lg font-bold text-slate-700">
-                  Response Coverage
-                </h2>
-              </div>
-            </div>
-
-            <CoverageBar label="Rescue teams responding" value="6 / 8" percentage={75} />
-            <CoverageBar label="Shelter capacity available" value="27%" percentage={27} />
-
-            <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4 text-xs">
-              <span className="text-slate-400">Last system update</span>
-              <span className="font-semibold text-green-600">12 sec ago</span>
-            </div>
-          </section>
-        </section>
-
         {/* Keep this only if you want the infrastructure footer section. */}
         <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -594,39 +357,6 @@ export default function Dashboard() {
         </section>
       </div>
     </main>
-  )
-}
-
-function StatCard({
-  icon,
-  label,
-  value,
-  badge,
-  badgeClass,
-  valueClass,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: string
-  badge: string
-  badgeClass: string
-  valueClass: string
-}) {
-  return (
-    <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-blue-600">
-          {icon}
-        </div>
-        <span className={`max-w-[120px] rounded px-2 py-1 text-center text-[8px] font-bold leading-3 ${badgeClass}`}>
-          {badge}
-        </span>
-      </div>
-      <div className="mt-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400">
-        {label}
-      </div>
-      <div className={`mt-1 text-2xl font-bold ${valueClass}`}>{value}</div>
-    </div>
   )
 }
 
@@ -682,28 +412,6 @@ function InfoRow({
   )
 }
 
-function CoverageBar({
-  label,
-  value,
-  percentage,
-}: {
-  label: string
-  value: string
-  percentage: number
-}) {
-  return (
-    <div className="mb-5">
-      <div className="mb-2 flex items-center justify-between gap-3 text-xs">
-        <span className="text-slate-500">{label}</span>
-        <span className="font-semibold text-slate-700">{value}</span>
-      </div>
-      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-        <div className="h-full rounded-full bg-blue-600" style={{ width: `${percentage}%` }} />
-      </div>
-    </div>
-  )
-}
-
 function SystemStatus({ title, status }: { title: string; status: string }) {
   return (
     <div className="flex items-center justify-between rounded-lg border border-green-100 bg-green-50 p-3">
@@ -714,32 +422,6 @@ function SystemStatus({ title, status }: { title: string; status: string }) {
       <CheckCircle2 className="h-5 w-5 text-green-600" />
     </div>
   )
-}
-
-function severityClass(severity: string) {
-  switch (severity) {
-    case "CRITICAL":
-      return "border-red-100 bg-red-50 text-red-600"
-    case "HIGH":
-      return "border-orange-100 bg-orange-50 text-orange-600"
-    case "MEDIUM":
-      return "border-blue-100 bg-blue-50 text-blue-600"
-    default:
-      return "border-slate-100 bg-slate-50 text-slate-600"
-  }
-}
-
-function shelterClass(status: string) {
-  switch (status) {
-    case "OPEN":
-      return "bg-green-50 text-green-700"
-    case "NEAR CAPACITY":
-      return "bg-orange-50 text-orange-700"
-    case "FULL":
-      return "bg-red-50 text-red-700"
-    default:
-      return "bg-slate-50 text-slate-600"
-  }
 }
 
 function LegendItem({ label, className }: { label: string; className: string }) {

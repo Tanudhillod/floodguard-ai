@@ -520,5 +520,67 @@
         ]
       }
     }
+  },
+  {
+    "id": 9,
+    "created_at": "2026-09-04T05:54:33Z",
+    "status": "Pending",
+    "original_message": "2 people need help. Needs: RESCUE. Location: 28.60636, 77.11637. Situation: 4 people trapped in a building in Assam",
+    "extracted_data": {
+      "source_type": "INDIVIDUAL_SOS",
+      "location": {
+        "text": "Assam",
+        "latitude": 28.60636,
+        "longitude": 77.11637
+      },
+      "people": {
+        "total": "4",
+        "children": null,
+        "elderly": null,
+        "pregnant": null,
+        "injured": null,
+        "missing": null,
+        "deceased": null,
+        "mobility_impaired": null
+      },
+      "situation": "4 people are trapped in a building in Assam.",
+      "request": {
+        "type": "RESCUE",
+        "resources": [
+          "HELP"
+        ]
+      },
+      "needs": {
+        "food": false,
+        "water": false,
+        "medicine": false,
+        "shelter": false,
+        "rescue": true,
+        "medical_transfer": false
+      },
+      "contact_info": [],
+      "original_message": "2 people need help. Needs: RESCUE. Location: 28.60636, 77.11637. Situation: 4 people trapped in a building in Assam",
+      "priority": {
+        "priority": "LOW",
+        "priority_score": 23,
+        "score_breakdown": {
+          "people_score": 5,
+          "vulnerability_score": 0,
+          "needs_score": 7,
+          "request_score": 6,
+          "flood_score": 0,
+          "location_score": 5
+        },
+        "inputs": {
+          "sos_people": 4,
+          "feature2_people": null,
+          "effective_people": 4,
+          "flood_severity": 0.0
+        },
+        "recommended_actions": [
+          "RESCUE"
+        ]
+      }
+    }
   }
 ]
