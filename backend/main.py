@@ -311,6 +311,37 @@ def _extract_location_from_filename(filename: str):
     }
 
 
+def _extract_explicit_coordinates(message: str):
+    if not message:
+        return None
+
+    patterns = [
+        r"(?i)\blocation\s*[:=-]\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)",
+        r"(?i)\bcoordinates?\s*[:=-]\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)",
+        r"(?<!\d)(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)(?!\d)",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, message)
+
+        if not match:
+            continue
+
+        try:
+            latitude = float(match.group(1))
+            longitude = float(match.group(2))
+        except (TypeError, ValueError):
+            continue
+
+        if -90 <= latitude <= 90 and -180 <= longitude <= 180:
+            return {
+                "latitude": latitude,
+                "longitude": longitude,
+            }
+
+    return None
+
+
 # ============================================================
 # DRONE PREDICTION
 # ============================================================
@@ -780,6 +811,25 @@ async def analyze_sos(request: SOSRequest):
         # FEATURE 3 — SOS INTELLIGENCE
         # --------------------------------------------------------
         result = extract_sos_llm(request.message)
+        explicit_coordinates = _extract_explicit_coordinates(
+            request.message
+        )
+
+        if explicit_coordinates:
+            if not isinstance(result.get("location"), dict):
+                result["location"] = {}
+
+            result["location"]["latitude"] = (
+                explicit_coordinates["latitude"]
+            )
+            result["location"]["longitude"] = (
+                explicit_coordinates["longitude"]
+            )
+
+        print(
+            "📍 SOS ROUTING LOCATION:",
+            result.get("location")
+        )
 
         # --------------------------------------------------------
         # FEATURE 4 — PRIORITY INTELLIGENCE
@@ -1755,272 +1805,74 @@ def calculate_distance_km(
 
 
 # ============================================================
-# EXTRACT JSON FROM SWYTCHCODE OUTPUT
+# FIND SHELTERS IN THE FLOODGUARD DATABASE
 # ============================================================
 
-def _extract_json_object(text):
-
-    if not text:
-        return None
-
-    text = text.strip()
-
-    start = text.find("{")
-
-    if start == -1:
-        return None
-
-    end = text.rfind("}")
-
-    if end == -1:
-        return None
-
-    try:
-        return json.loads(
-            text[start:end + 1]
-        )
-
-    except json.JSONDecodeError:
-        return None
-
-
-# ============================================================
-# FIND SHELTERS THROUGH SWYTCHCODE
-# ============================================================
-
-def _find_shelters_with_swytchcode(
+def _get_shelters_from_floodguard_database(
     latitude: float,
     longitude: float
 ):
-
-    if not GOOGLE_MAPS_API_KEY:
-
-        raise HTTPException(
-            status_code=500,
-            detail=(
-                "GOOGLE_MAPS_API_KEY is not configured. "
-                "Check your .env file and restart FastAPI."
-            )
-        )
-
-    query = (
-        f"emergency shelters near "
-        f"{latitude},{longitude}"
-    )
-
-    command = [
-
-        SWY_PATH,
-
-        "exec",
-
-        "places.placessearchtext.create",
-
-        "--input",
-        f"textQuery={query}",
-
-        "--input",
-        f"key={GOOGLE_MAPS_API_KEY}",
-
-        "--header",
-        (
-            "X-Goog-FieldMask="
-            "places.displayName,"
-            "places.id,"
-            "places.formattedAddress,"
-            "places.location"
-        ),
-
-        "--json"
-    ]
-
     try:
-
-        result = subprocess.run(
-            command,
-            capture_output=True,
-            text=False,
-            timeout=30
+        shelter_rows = (
+            operations_supabase
+            .table("shelters")
+            .select("*")
+            .execute()
+            .data
         )
-
-    except subprocess.TimeoutExpired:
-
-        raise HTTPException(
-            status_code=504,
-            detail="Swytchcode shelter search timed out."
-        )
-
-    except FileNotFoundError:
-
-        raise HTTPException(
-            status_code=500,
-            detail=(
-                "Swytchcode CLI was not found. "
-                f"Expected path: {SWY_PATH}"
-            )
-        )
-
     except Exception as e:
-
         raise HTTPException(
             status_code=500,
-            detail=(
-                f"Failed to execute Swytchcode: {str(e)}"
-            )
-        )
-
-    stdout = (
-        (result.stdout or b"")
-        .decode(
-            "utf-8",
-            errors="replace"
-        )
-        .strip()
-    )
-
-    stderr = (
-        (result.stderr or b"")
-        .decode(
-            "utf-8",
-            errors="replace"
-        )
-        .strip()
-    )
-
-    if result.returncode != 0:
-
-        raise HTTPException(
-            status_code=502,
-            detail={
-                "message": "Swytchcode shelter search failed.",
-                "error": stderr or stdout
-            }
-        )
-
-    response_data = _extract_json_object(
-        stdout
-    )
-
-    if not response_data:
-
-        raise HTTPException(
-            status_code=502,
-            detail={
-                "message": (
-                    "Could not parse Swytchcode shelter response."
-                ),
-                "raw_response": stdout[:2000]
-            }
-        )
-
-    data = response_data.get(
-        "data",
-        response_data
-    )
-
-    places = []
-
-    if isinstance(data, dict):
-
-        places = data.get(
-            "places",
-            []
+            detail=f"Failed to load shelter data: {str(e)}"
         )
 
     shelters = []
 
-    for place in places:
-
-        if not isinstance(place, dict):
-            continue
-
-        display_name = place.get(
-            "displayName",
-            {}
-        )
-
-        location = place.get(
-            "location",
-            {}
-        )
-
-        if isinstance(display_name, dict):
-
-            name = display_name.get(
-                "text"
-            )
-
-        else:
-
-            name = display_name
-
-        if isinstance(location, dict):
-
-            place_latitude = location.get(
-                "latitude"
-            )
-
-            place_longitude = location.get(
-                "longitude"
-            )
-
-        else:
-
-            place_latitude = None
-            place_longitude = None
-
-        if (
-            place_latitude is None
-            or
-            place_longitude is None
-        ):
+    for shelter in shelter_rows or []:
+        if not isinstance(shelter, dict):
             continue
 
         try:
+            shelter_latitude = float(shelter.get("latitude"))
+            shelter_longitude = float(shelter.get("longitude"))
+        except (TypeError, ValueError):
+            continue
 
-            place_latitude = float(
-                place_latitude
-            )
-
-            place_longitude = float(
-                place_longitude
-            )
-
-        except (
-            TypeError,
-            ValueError
+        if (
+            not math.isfinite(shelter_latitude)
+            or not math.isfinite(shelter_longitude)
+            or not -90 <= shelter_latitude <= 90
+            or not -180 <= shelter_longitude <= 180
         ):
+            continue
 
+        status = str(shelter.get("status") or "").strip().upper()
+        if status in {"FULL", "CLOSED", "UNAVAILABLE"}:
+            continue
+
+        try:
+            capacity_remaining = float(shelter.get("capacity_remaining"))
+        except (TypeError, ValueError):
+            continue
+
+        if not math.isfinite(capacity_remaining) or capacity_remaining <= 0:
             continue
 
         distance_km = calculate_distance_km(
             latitude,
             longitude,
-            place_latitude,
-            place_longitude
+            shelter_latitude,
+            shelter_longitude
         )
 
         shelters.append({
-
-            "id": place.get(
-                "id"
-            ),
-
-            "name": name or "Emergency Shelter",
-
-            "address": place.get(
-                "formattedAddress"
-            ) or "Address unavailable",
-
-            "latitude": place_latitude,
-
-            "longitude": place_longitude,
-
-            "distance_km": round(
-                distance_km,
-                2
-            )
-
+            **shelter,
+            "id": shelter.get("shelter_id"),
+            "name": shelter.get("name") or "Emergency Shelter",
+            "address": shelter.get("location_text") or "Address unavailable",
+            "latitude": shelter_latitude,
+            "longitude": shelter_longitude,
+            "distance_km": round(distance_km, 2),
         })
 
     # --------------------------------------------------------
@@ -2062,7 +1914,7 @@ async def find_shelters(
             detail="Invalid longitude."
         )
 
-    shelters = _find_shelters_with_swytchcode(
+    shelters = _get_shelters_from_floodguard_database(
         latitude,
         longitude
     )
@@ -2072,8 +1924,7 @@ async def find_shelters(
         "success": True,
 
         "source": (
-            "FloodGuard → Swytchcode → "
-            "Google Maps Places API"
+            "FloodGuard Supabase shelters table"
         ),
 
         "origin": {
@@ -3145,7 +2996,7 @@ async def safe_route(
     # 1. Find real nearby shelters
     # --------------------------------------------------------
 
-    shelters = _find_shelters_with_swytchcode(
+    shelters = _get_shelters_from_floodguard_database(
         latitude,
         longitude
     )
@@ -3880,7 +3731,7 @@ async def safe_route(
         "data_sources": {
 
             "shelters":
-                "Swytchcode → Google Maps Places API",
+                "FloodGuard Supabase shelters table",
 
             "route":
                 recommended.get(

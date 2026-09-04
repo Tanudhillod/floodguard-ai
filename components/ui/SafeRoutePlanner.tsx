@@ -35,15 +35,6 @@ interface Recommendation {
 }
 
 // ============================================================
-// DEFAULT LOCATION - NEW DELHI
-// ============================================================
-
-const DEFAULT_LOCATION: Location = {
-  latitude: 28.6139,
-  longitude: 77.209,
-}
-
-// ============================================================
 // DISTANCE CALCULATION
 // ============================================================
 
@@ -580,7 +571,7 @@ function ShelterMap({
         >
           <DynamicPopup>
             <strong>
-              Your current location
+              Top-priority rescue location
             </strong>
 
             <br />
@@ -638,66 +629,63 @@ export default function SafeRoutePlanner() {
     useState<string | null>(null)
 
   // ==========================================================
-  // GET USER LOCATION
+  // GET TOP-PRIORITY RESCUE LOCATION
   // ==========================================================
 
-  const getGeolocation = () => {
+  const getPriorityLocation = async () => {
     setLoading(true)
     setLocationError(null)
 
-    if (!navigator.geolocation) {
-      setLocationError(
-        "Geolocation is not supported by your browser. Using New Delhi fallback location."
+    const apiUrl =
+      process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
+
+    try {
+      const response = await fetch(
+        `${apiUrl}/priority-dashboard?flood_severity=1.0&match_radius_km=5`
       )
 
-      setUserLocation(DEFAULT_LOCATION)
-      setLoading(false)
-
-      return
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setUserLocation({
-          latitude:
-            position.coords.latitude,
-          longitude:
-            position.coords.longitude,
-        })
-
-        setLocationError(null)
-        setLoading(false)
-      },
-      (error) => {
-        if (
-          error.code ===
-          error.PERMISSION_DENIED
-        ) {
-          setLocationError(
-            "Location permission denied. Using New Delhi fallback location."
-          )
-        } else if (
-          error.code ===
-          error.POSITION_UNAVAILABLE
-        ) {
-          setLocationError(
-            "Location unavailable. Using New Delhi fallback location."
-          )
-        } else {
-          setLocationError(
-            "Failed to get location. Using New Delhi fallback location."
-          )
-        }
-
-        setUserLocation(DEFAULT_LOCATION)
-        setLoading(false)
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 30000,
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`)
       }
-    )
+
+      const data = await response.json()
+      const emergencies = Array.isArray(data.emergencies)
+        ? data.emergencies
+        : []
+      const emergency =
+        emergencies.find((item: { rank?: number }) => item.rank === 1)
+        console.log("SAFE ROUTE RANK 1 EMERGENCY:", emergency)
+console.log(
+  "SAFE ROUTE ORIGIN:",
+  emergency?.latitude,
+  emergency?.longitude
+)
+
+      if (
+        !emergency ||
+        typeof emergency.latitude !== "number" ||
+        !Number.isFinite(emergency.latitude) ||
+        typeof emergency.longitude !== "number" ||
+        !Number.isFinite(emergency.longitude)
+      ) {
+        throw new Error("Top-priority rescue location is unavailable.")
+      }
+
+      setUserLocation({
+        latitude: emergency.latitude,
+        longitude: emergency.longitude,
+      })
+      setLocationError(null)
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unknown error"
+
+      setLocationError(message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   // ==========================================================
@@ -754,7 +742,7 @@ export default function SafeRoutePlanner() {
   // ==========================================================
 
   useEffect(() => {
-    getGeolocation()
+    getPriorityLocation()
   }, [])
 
   // ==========================================================
@@ -806,7 +794,7 @@ export default function SafeRoutePlanner() {
 
             <div>
               <div className="text-sm font-semibold text-[#0f2742]">
-                Detecting your location
+                Finding highest-priority rescue location
               </div>
 
               <div className="mt-1 text-xs text-slate-500">
@@ -1036,7 +1024,7 @@ export default function SafeRoutePlanner() {
                 <div className="mt-2 text-sm leading-6 text-slate-600">
                   This shelter is currently the
                   strongest nearby candidate based
-                  on your current location and
+                  on the top-priority rescue location and
                   distance.
                 </div>
 
@@ -1084,12 +1072,12 @@ export default function SafeRoutePlanner() {
                 </div>
 
                 <h3 className="mt-1 text-lg font-semibold text-[#173B5E]">
-                  Your location → recommended shelter
+                  Top-priority rescue location → recommended shelter
                 </h3>
               </div>
 
               <div className="hidden text-xs text-slate-500 sm:block">
-                Live location
+                Rescue starting location
               </div>
             </div>
 
@@ -1112,7 +1100,7 @@ export default function SafeRoutePlanner() {
 
               <div className="flex items-center gap-2">
                 <span className="h-3 w-3 rounded-full border-2 border-white bg-blue-600 shadow-sm" />
-                <span>Your location</span>
+                <span>Top-priority rescue location</span>
               </div>
 
               <div className="flex items-center gap-2">
@@ -1142,7 +1130,7 @@ export default function SafeRoutePlanner() {
 
                 <div className="mt-1 text-xs text-slate-500">
                   Open the route in Google Maps using
-                  your current location and the
+                  the top-priority rescue location and the
                   recommended shelter.
                 </div>
               </div>
@@ -1186,8 +1174,7 @@ export default function SafeRoutePlanner() {
               </div>
 
               <div className="mt-1 text-xs text-slate-500">
-                Try refreshing your location or
-                checking again later.
+                Try checking again later.
               </div>
 
             </div>
