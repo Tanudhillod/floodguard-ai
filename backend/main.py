@@ -1,28 +1,28 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Form, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from fastapi import Depends
-from sqlalchemy.orm import Session
-from backend.database import Base, engine, get_db
-from backend.models import SOSRequest as SOSRequestModel
+
 from backend.operations.allocator import run_module5
 from backend.operations.shelter_allocator import run_module7
 from backend.operations.relief_planner import run_module8
 from backend.operations.adapter import priority_result_to_incident_row
-from backend.operations.db_client import supabase
+
 import cv2
 import numpy as np
 import json
 import os
 import subprocess
 import math
+import time
 import urllib.request
 import urllib.error
 import urllib.parse
+import re
 
 from dotenv import load_dotenv
 
 from backend.services.detector import DroneDetector
+from backend.supabase_client import supabase
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 
@@ -67,7 +67,57 @@ app = FastAPI(
     ),
     version="2.1.0"
 )
-Base.metadata.create_all(bind=engine)
+
+# ============================================================
+# LOCAL SOS STORAGE
+# ============================================================
+# SOS is kept locally so it does not depend on the Supabase
+# sos_requests table. Supabase remains available for the
+# drone feature.
+# ============================================================
+# LOCAL PERSISTENT SOS STORAGE
+# ============================================================
+
+SOS_FILE = "sos_data.json"
+
+
+def load_sos_store():
+    """Load SOS requests from local JSON storage."""
+    if not os.path.exists(SOS_FILE):
+        return []
+
+    try:
+        with open(SOS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        return data if isinstance(data, list) else []
+
+    except (json.JSONDecodeError, OSError):
+        return []
+
+
+def save_sos_store(store):
+    """Save SOS requests to local JSON storage."""
+    with open(SOS_FILE, "w", encoding="utf-8") as f:
+        json.dump(
+            store,
+            f,
+            indent=2,
+            ensure_ascii=False
+        )
+
+
+SOS_STORE = load_sos_store()
+
+SOS_COUNTER = (
+    max(
+        [int(item.get("id", 0)) for item in SOS_STORE]
+        or [0]
+    )
+    + 1
+)
+
+#
 # ============================================================
 # FEATURE 1 / 3 / 4 REQUEST MODELS
 # ============================================================
@@ -111,13 +161,28 @@ app.add_middleware(
 
 MODEL_PATH = "backend/models/floodguard_person_v2.pt"
 
+# Detection configuration
+# 0.50 removes very weak false-positive predictions while
+# keeping reasonably confident person detections.
+DETECTION_CONFIDENCE = 0.50
+
 detector = DroneDetector(
     model_path=MODEL_PATH,
     tile_size=512,
     overlap=0.25,
-    conf_threshold=0.10,
+    conf_threshold=DETECTION_CONFIDENCE,
     nms_iou=0.45
 )
+
+print("=" * 60)
+print("FloodGuard AI detector configuration")
+print("=" * 60)
+print(f"Model: {MODEL_PATH}")
+print(f"Confidence threshold: {DETECTION_CONFIDENCE}")
+print("Tile size: 512")
+print("Overlap: 0.25")
+print("NMS IoU: 0.45")
+print("=" * 60)
 
 
 # ============================================================
@@ -149,11 +214,135 @@ def health():
 
 
 # ============================================================
+# EXTRACT LOCATION FROM DRONE IMAGE FILENAME
+# ============================================================
+
+def _extract_location_from_filename(filename: str):
+    """
+    Extract location metadata from the uploaded drone image filename.
+
+    Expected filename format:
+        location_state_latitude_longitude_flood.jpg
+
+    Examples:
+        supaul_bihar_26.1153_86.5951_flood.jpg
+        patna_bihar_25.1000_85.1000_flood.jpg
+        dibrugarh_assam_27.4845_94.9019_flood.jpg
+        malda_west_bengal_25.1372_88.0899_flood.jpg
+
+    The filename is now the source of truth for the drone image
+    location. Any live/browser location sent by the frontend is ignored.
+    """
+
+    if not filename:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "The uploaded image must have a location-based filename "
+                "in the format: location_state_latitude_longitude_flood.jpg"
+            )
+        )
+
+    safe_filename = os.path.basename(filename)
+
+    # Remove the extension before parsing.
+    stem = os.path.splitext(safe_filename)[0].strip()
+
+    # Match the latitude and longitude from the end of the filename.
+    # This also allows negative coordinates.
+    pattern = re.compile(
+        r"^(?P<location>.+?)_"
+        r"(?P<latitude>-?\d+(?:\.\d+)?)_"
+        r"(?P<longitude>-?\d+(?:\.\d+)?)_"
+        r"flood(?:_[^_]*)?$",
+        re.IGNORECASE
+    )
+
+    match = pattern.match(stem)
+
+    if not match:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Invalid drone image filename. Expected format: "
+                "location_state_latitude_longitude_flood.jpg"
+            )
+        )
+
+    location_part = match.group("location")
+
+    try:
+        parsed_latitude = float(
+            match.group("latitude")
+        )
+        parsed_longitude = float(
+            match.group("longitude")
+        )
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Latitude or longitude in the filename is invalid."
+        )
+
+    if not -90 <= parsed_latitude <= 90:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid latitude in filename: {parsed_latitude}"
+        )
+
+    if not -180 <= parsed_longitude <= 180:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid longitude in filename: {parsed_longitude}"
+        )
+
+    # Convert the machine-readable filename part into a human-readable
+    # location label while preserving the original filename separately.
+    location_name = location_part.replace("_", " ").strip()
+    location_name = " ".join(location_name.split()).title()
+
+    return {
+        "location": location_name,
+        "latitude": parsed_latitude,
+        "longitude": parsed_longitude,
+        "location_part": location_part,
+        "source": "filename"
+    }
+
+
+# ============================================================
 # DRONE PREDICTION
 # ============================================================
 
 @app.post("/predict")
-async def predict(file: UploadFile = File(...)):
+async def predict(
+    file: UploadFile = File(...),
+    # These fields are kept for frontend backward compatibility.
+    # They are intentionally NOT used for the drone location anymore.
+    latitude: Optional[float] = Form(None),
+    longitude: Optional[float] = Form(None),
+    location: Optional[str] = Form(None)
+):
+
+    # --------------------------------------------------------
+    # LOCATION SOURCE
+    # --------------------------------------------------------
+    # IMPORTANT:
+    # The drone image filename is now the source of truth.
+    # Any live/browser GPS values sent by the frontend are ignored.
+    # --------------------------------------------------------
+
+    filename_metadata = _extract_location_from_filename(
+        file.filename
+    )
+
+    image_latitude = filename_metadata["latitude"]
+    image_longitude = filename_metadata["longitude"]
+    image_location = filename_metadata["location"]
+
+    # --------------------------------------------------------
+    # Validate image
+    # --------------------------------------------------------
 
     if not file.content_type or not file.content_type.startswith(
         "image/"
@@ -164,6 +353,12 @@ async def predict(file: UploadFile = File(...)):
         )
 
     image_bytes = await file.read()
+
+    if not image_bytes:
+        raise HTTPException(
+            status_code=400,
+            detail="Uploaded image is empty."
+        )
 
     image_array = np.frombuffer(
         image_bytes,
@@ -181,16 +376,26 @@ async def predict(file: UploadFile = File(...)):
             detail="Could not process the uploaded image."
         )
 
+    # --------------------------------------------------------
+    # Run AI detection
+    # --------------------------------------------------------
+
     try:
+
         detections, annotated_image = detector.predict(
             image
         )
 
     except Exception as e:
+
         raise HTTPException(
             status_code=500,
             detail=f"Detection failed: {str(e)}"
         )
+
+    # --------------------------------------------------------
+    # Format detections
+    # --------------------------------------------------------
 
     formatted_detections = []
 
@@ -199,12 +404,97 @@ async def predict(file: UploadFile = File(...)):
         x1, y1, x2, y2, confidence = detection
 
         formatted_detections.append({
+
             "x1": round(x1, 2),
+
             "y1": round(y1, 2),
+
             "x2": round(x2, 2),
+
             "y2": round(y2, 2),
-            "confidence": round(confidence, 4)
+
+            "confidence": round(
+                confidence,
+                4
+            )
         })
+
+    # --------------------------------------------------------
+    # Calculate detection statistics
+    # --------------------------------------------------------
+
+    people_detected = len(
+        formatted_detections
+    )
+
+    if people_detected > 0:
+
+        average_confidence = (
+            sum(
+                detection["confidence"]
+                for detection
+                in formatted_detections
+            )
+            /
+            people_detected
+        )
+
+    else:
+
+        average_confidence = 0.0
+
+    # --------------------------------------------------------
+    # Upload original image to Supabase Storage
+    # --------------------------------------------------------
+
+    try:
+
+        original_filename = (
+            file.filename
+            or
+            "drone_image.jpg"
+        )
+
+        # Prevent directory traversal
+        safe_filename = os.path.basename(
+            original_filename
+        )
+
+        # Make filename unique
+        timestamp = int(time.time() * 1000)
+
+        image_path = (
+            f"detections/"
+            f"{timestamp}_"
+            f"{safe_filename}"
+        )
+
+        supabase.storage.from_(
+            "drone-images"
+        ).upload(
+            image_path,
+            image_bytes,
+            {
+                "content-type":
+                    file.content_type
+                    or
+                    "image/jpeg"
+            }
+        )
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                f"Image upload to Supabase failed: "
+                f"{str(e)}"
+            )
+        )
+
+    # --------------------------------------------------------
+    # Encode annotated image for existing frontend
+    # --------------------------------------------------------
 
     success, encoded_image = cv2.imencode(
         ".jpg",
@@ -212,34 +502,215 @@ async def predict(file: UploadFile = File(...)):
     )
 
     if not success:
+
         raise HTTPException(
             status_code=500,
             detail="Could not encode annotated image."
         )
 
+    # --------------------------------------------------------
+    # Upload processed/annotated image to Supabase
+    # --------------------------------------------------------
+
+    try:
+
+        processed_image_path = (
+            f"detections/processed_"
+            f"{timestamp}_"
+            f"{safe_filename}"
+        )
+
+        supabase.storage.from_(
+            "drone-images"
+        ).upload(
+            processed_image_path,
+            encoded_image.tobytes(),
+            {
+                "content-type":
+                    "image/jpeg"
+            }
+        )
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                f"Processed image upload to Supabase failed: "
+                f"{str(e)}"
+            )
+        )
+
+    # --------------------------------------------------------
+    # Save detection information to Supabase
+    # --------------------------------------------------------
+
+    try:
+
+        detection_record = {
+
+            "image_path":
+                processed_image_path,
+
+            "location":
+                image_location,
+
+            "latitude":
+                image_latitude,
+
+            "longitude":
+                image_longitude,
+
+            "location_source":
+                "filename",
+
+            # Current detector does not calculate
+            # analysis duration.
+            "time_span":
+                None,
+
+            "people_detected":
+                people_detected,
+
+            # Current person detector does not
+            # calculate flooded area.
+            "flood_area":
+                None,
+
+            # Do not use HIGH based only on
+            # people detection.
+            "severity":
+                None,
+
+            "confidence":
+                round(
+                    average_confidence,
+                    4
+                ),
+
+            "model_name":
+                "floodguard_person_v2.pt",
+
+            "analysis_status":
+                "COMPLETED"
+        }
+
+        db_response = (
+            supabase
+            .table("drone_detections")
+            .insert(
+                detection_record
+            )
+            .execute()
+        )
+
+    except Exception as e:
+
+        # ----------------------------------------------------
+        # If DB insert fails, remove the uploaded image
+        # so we don't leave an orphaned Storage object.
+        # ----------------------------------------------------
+
+        try:
+
+            supabase.storage.from_(
+                "drone-images"
+            ).remove([
+                image_path,
+                processed_image_path
+            ])
+
+        except Exception:
+
+            pass
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                f"Detection data could not be saved "
+                f"to Supabase: {str(e)}"
+            )
+        )
+
+    # --------------------------------------------------------
+    # Existing frontend metadata
+    # --------------------------------------------------------
+
     metadata = {
-        "success": True,
-        "filename": file.filename,
-        "people_count": len(formatted_detections),
-        "detections": formatted_detections
+
+        "success":
+            True,
+
+        "filename":
+            file.filename,
+
+        "people_count":
+            people_detected,
+
+        "detections":
+            formatted_detections,
+
+        # New Supabase-related information
+        "latitude":
+            image_latitude,
+
+        "longitude":
+            image_longitude,
+
+        "location":
+            image_location,
+
+        "location_source":
+            "filename",
+
+        "image_path":
+            processed_image_path,
+
+        "confidence":
+            round(
+                average_confidence,
+                4
+            ),
+
+        "model_name":
+            "floodguard_person_v2.pt",
+
+        "analysis_status":
+            "COMPLETED"
     }
 
     metadata_json = json.dumps(
         metadata
     )
 
+    # --------------------------------------------------------
+    # Keep existing multipart/mixed response
+    # --------------------------------------------------------
+
     boundary = "FloodGuardBoundary"
 
     body = (
+
         f"--{boundary}\r\n"
+
         f"Content-Type: application/json\r\n"
-        f"Content-Disposition: form-data; name=\"metadata\"\r\n"
+
+        f"Content-Disposition: "
+        f"form-data; name=\"metadata\"\r\n"
+
         f"\r\n"
+
         f"{metadata_json}\r\n"
+
         f"--{boundary}\r\n"
+
         f"Content-Type: image/jpeg\r\n"
-        f"Content-Disposition: inline; name=\"image\"; filename=\"result.jpg\"\r\n"
+
+        f"Content-Disposition: inline; "
+        f"name=\"image\"; filename=\"result.jpg\"\r\n"
+
         f"\r\n"
+
     ).encode("utf-8")
 
     body += encoded_image.tobytes()
@@ -250,7 +721,10 @@ async def predict(file: UploadFile = File(...)):
 
     return Response(
         content=body,
-        media_type=f"multipart/mixed; boundary={boundary}"
+        media_type=(
+            f"multipart/mixed; "
+            f"boundary={boundary}"
+        )
     )
 # ============================================================
 # FEATURE 1 — FLOOD RISK
@@ -297,36 +771,25 @@ async def flood_risk(request: FloodRiskRequest):
 # ============================================================
 
 @app.post("/sos")
-async def analyze_sos(
-    request: SOSRequest,
-    db: Session = Depends(get_db)
-):
+async def analyze_sos(request: SOSRequest):
+    global SOS_COUNTER
 
     try:
-
-        # ========================================================
+        # --------------------------------------------------------
         # FEATURE 3 — SOS INTELLIGENCE
-        # ========================================================
+        # --------------------------------------------------------
+        result = extract_sos_llm(request.message)
 
-        result = extract_sos_llm(
-            request.message
-        )
-
-
-        # ========================================================
+        # --------------------------------------------------------
         # FEATURE 4 — PRIORITY INTELLIGENCE
-        # ========================================================
-
+        # --------------------------------------------------------
         priority_result = calculate_priority(
             sos_data=result,
             feature2_people_count=None,
             flood_severity=0.0
         )
 
-
-        # Add Feature 4 result to the extracted data
         result["priority"] = priority_result
-        
         try:
             location_text = result.get("location", {}).get("text")
             incident_row = priority_result_to_incident_row(
@@ -335,50 +798,40 @@ async def analyze_sos(
             supabase.table("rescue_incidents").upsert(incident_row).execute()
         except Exception as log_err:
             print(f"[WARN] Failed to save incident to rescue_incidents: {log_err}")
-            
-            
-        # ========================================================
-        # SAVE SOS TO DATABASE
-        # ========================================================
 
-        sos_record = SOSRequestModel(
-            original_message=request.message,
-            extracted_data=json.dumps(result),
-            status="Pending"
-        )
+        # --------------------------------------------------------
+        # STORE SOS LOCALLY
+        # --------------------------------------------------------
+        # We intentionally do not use Supabase for SOS.
+        # Supabase is still used by the drone feature.
 
-        db.add(sos_record)
-        db.commit()
-        db.refresh(sos_record)
-
-
-        # ========================================================
-        # RETURN RESULT
-        # ========================================================
-
-        return {
-            "id": sos_record.id,
-            "created_at": sos_record.created_at,
-            "status": sos_record.status,
-            "original_message": sos_record.original_message,
+        sos_record = {
+            "id": SOS_COUNTER,
+            "created_at": time.strftime(
+                "%Y-%m-%dT%H:%M:%SZ",
+                time.gmtime()
+            ),
+            "status": "Pending",
+            "original_message": request.message,
             "extracted_data": result
         }
 
+        SOS_STORE.append(sos_record)
+
+        save_sos_store(SOS_STORE)
+
+        SOS_COUNTER += 1
+
+        return sos_record
 
     except ValueError as e:
-
-        db.rollback()
-
         raise HTTPException(
             status_code=400,
             detail=str(e)
         )
 
-
     except Exception as e:
-
-        db.rollback()
-
+        print("🔥🔥🔥 SOS ERROR:", repr(e))
         raise HTTPException(
             status_code=500,
             detail=f"SOS analysis failed: {str(e)}"
@@ -390,42 +843,20 @@ async def analyze_sos(
 # ============================================================
 
 @app.get("/sos")
-def get_sos_requests(
-    db: Session = Depends(get_db)
-):
+def get_sos_requests():
+    try:
+        return {
+            "requests": list(reversed(SOS_STORE))
+        }
 
-    requests = (
-        db.query(SOSRequestModel)
-        .order_by(
-            SOSRequestModel.created_at.desc()
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Could not fetch SOS requests: {str(e)}"
         )
-        .all()
-    )
 
-    result = []
 
-    for request in requests:
-
-        try:
-            extracted_data = json.loads(
-                request.extracted_data
-            )
-        except Exception:
-            extracted_data = {}
-
-        result.append({
-            "id": request.id,
-            "created_at": request.created_at,
-            "status": request.status,
-            "original_message": request.original_message,
-            "extracted_data": extracted_data
-        })
-
-    return {
-        "requests": result
-    }
-    
-    # ============================================================
+# ============================================================
 # FEATURE 4 — MULTI-MODAL PRIORITY
 # ============================================================
 
@@ -460,6 +891,756 @@ async def calculate_emergency_priority(
         raise HTTPException(
             status_code=500,
             detail=f"Priority calculation failed: {str(e)}"
+        )
+
+
+# ============================================================
+# FEATURE 4 — MULTI-MODAL PRIORITY DASHBOARD
+# ============================================================
+
+# ============================================================
+# FEATURE 4 — MULTI-MODAL PRIORITY DASHBOARD
+# ============================================================
+
+@app.get("/priority-dashboard")
+async def priority_dashboard(
+    flood_severity: float = 0.0,
+    match_radius_km: float = 5.0
+):
+    """
+    FEATURE 4 — MULTI-MODAL PRIORITY DASHBOARD
+
+    Combines:
+
+        Feature 3:
+            SOS intelligence
+            - location
+            - people
+            - vulnerable people
+            - needs
+            - request type
+
+        Feature 2:
+            Drone intelligence
+            - people detected
+            - drone location
+            - drone image
+
+        Feature 1:
+            Flood risk severity
+
+    For every active SOS:
+
+        1. Find the nearest drone observation.
+        2. Combine SOS + drone + flood information.
+        3. Calculate priority using calculate_priority().
+        4. Sort all emergencies from highest score to lowest.
+        5. Assign an explicit rank.
+
+    Drone location is taken from the location information
+    stored when the drone image was processed.
+    """
+
+    try:
+
+        # ========================================================
+        # 1. VALIDATE PARAMETERS
+        # ========================================================
+
+        flood_severity = max(
+            0.0,
+            min(float(flood_severity), 1.0)
+        )
+
+        match_radius_km = max(
+            0.1,
+            float(match_radius_km)
+        )
+
+
+        # ========================================================
+        # 2. GET ACTIVE SOS REQUESTS
+        # ========================================================
+        #
+        # SOS is stored locally in SOS_STORE.
+        # We DO NOT use Supabase for SOS.
+        #
+
+        active_statuses = {
+            "pending",
+            "active",
+            "open",
+            "new"
+        }
+
+        sos_records = list(SOS_STORE)
+
+        # Newest SOS first
+        sos_records.reverse()
+
+        active_sos = [
+            sos
+            for sos in sos_records
+            if str(
+                sos.get("status", "Pending")
+            ).lower() in active_statuses
+        ]
+
+
+        # ========================================================
+        # 3. GET DRONE OBSERVATIONS
+        # ========================================================
+        #
+        # Drone data continues to come from Supabase.
+        #
+        # The drone records contain:
+        # - location
+        # - latitude
+        # - longitude
+        # - people_detected
+        # - image_path
+        # - confidence
+        #
+
+        drone_response = (
+            supabase
+            .table("drone_detections")
+            .select("*")
+            .eq(
+                "analysis_status",
+                "COMPLETED"
+            )
+            .order(
+                "id",
+                desc=True
+            )
+            .execute()
+        )
+
+        drone_records = (
+            getattr(
+                drone_response,
+                "data",
+                None
+            )
+            or []
+        )
+
+
+        # ========================================================
+        # 4. PROCESS EACH SOS
+        # ========================================================
+
+        ranked = []
+
+        for sos in active_sos:
+
+            # ====================================================
+            # 4A. GET EXTRACTED SOS DATA
+            # ====================================================
+
+            raw_extracted = sos.get(
+                "extracted_data",
+                {}
+            )
+
+            if isinstance(
+                raw_extracted,
+                str
+            ):
+                try:
+                    extracted = json.loads(
+                        raw_extracted
+                    )
+
+                except (
+                    json.JSONDecodeError,
+                    TypeError
+                ):
+                    extracted = {}
+
+            elif isinstance(
+                raw_extracted,
+                dict
+            ):
+                extracted = raw_extracted
+
+            else:
+                extracted = {}
+
+
+            # ====================================================
+            # 4B. EXTRACT SOS LOCATION
+            # ====================================================
+
+            location_data = extracted.get(
+                "location",
+                {}
+            )
+
+            sos_location = ""
+
+            sos_latitude = None
+
+            sos_longitude = None
+
+
+            if isinstance(
+                location_data,
+                dict
+            ):
+
+                sos_location = str(
+                    location_data.get("text")
+                    or location_data.get("name")
+                    or ""
+                ).strip()
+
+
+                # Latitude
+                try:
+
+                    if (
+                        location_data.get(
+                            "latitude"
+                        ) is not None
+                    ):
+
+                        sos_latitude = float(
+                            location_data.get(
+                                "latitude"
+                            )
+                        )
+
+                except (
+                    TypeError,
+                    ValueError
+                ):
+
+                    sos_latitude = None
+
+
+                # Longitude
+                try:
+
+                    if (
+                        location_data.get(
+                            "longitude"
+                        ) is not None
+                    ):
+
+                        sos_longitude = float(
+                            location_data.get(
+                                "longitude"
+                            )
+                        )
+
+                except (
+                    TypeError,
+                    ValueError
+                ):
+
+                    sos_longitude = None
+
+
+            elif isinstance(
+                location_data,
+                str
+            ):
+
+                sos_location = (
+                    location_data.strip()
+                )
+
+
+            # ====================================================
+            # 4C. MATCH DRONE TO SOS LOCATION
+            # ====================================================
+            #
+            # IMPORTANT:
+            # Match by normalized LOCATION NAME first.
+            #
+            # Why?
+            # The SOS LLM can sometimes extract an approximate or
+            # incorrect GPS coordinate from natural-language text.
+            # The drone filename, however, is our trusted source:
+            #
+            #   supaul_bihar_26.1153_86.5951_flood.png
+            #       -> Supaul Bihar
+            #
+            # Therefore:
+            #   1. Location-name match first
+            #   2. GPS distance fallback only if no name match exists
+            #
+            # This fixes cases such as:
+            #   SOS: "Supaul, Bihar"
+            #   Drone: "Supaul Bihar"
+            # ====================================================
+
+            def _normalize_location_name(value):
+                if value is None:
+                    return ""
+
+                normalized = str(value).lower().strip()
+
+                # Treat underscores/hyphens/commas as separators.
+                normalized = re.sub(
+                    r"[_,-]+",
+                    " ",
+                    normalized
+                )
+
+                # Remove common non-location filler words.
+                normalized = re.sub(
+                    r"\b(near|at|in|around|district|city)\b",
+                    " ",
+                    normalized
+                )
+
+                # Collapse whitespace.
+                normalized = re.sub(
+                    r"\s+",
+                    " ",
+                    normalized
+                ).strip()
+
+                return normalized
+
+            sos_location_normalized = _normalize_location_name(
+                sos_location
+            )
+
+            best_drone = None
+            best_distance = float("inf")
+
+            # ----------------------------------------------------
+            # 4C-1. LOCATION NAME MATCH — PRIMARY
+            # ----------------------------------------------------
+
+            if sos_location_normalized:
+                for drone in drone_records:
+
+                    drone_location_normalized = (
+                        _normalize_location_name(
+                            drone.get("location")
+                        )
+                    )
+
+                    if not drone_location_normalized:
+                        continue
+
+                    if (
+                        sos_location_normalized
+                        == drone_location_normalized
+                        or
+                        sos_location_normalized
+                        in drone_location_normalized
+                        or
+                        drone_location_normalized
+                        in sos_location_normalized
+                    ):
+                        best_drone = drone
+                        best_distance = None
+
+                        # Prefer the newest matching drone record.
+                        break
+
+            # ----------------------------------------------------
+            # 4C-2. GPS MATCH — FALLBACK
+            # ----------------------------------------------------
+
+            if best_drone is None:
+                for drone in drone_records:
+
+                    drone_lat = drone.get("latitude")
+                    drone_lon = drone.get("longitude")
+
+                    if (
+                        sos_latitude is None
+                        or sos_longitude is None
+                        or drone_lat is None
+                        or drone_lon is None
+                    ):
+                        continue
+
+                    try:
+                        distance = calculate_distance_km(
+                            sos_latitude,
+                            sos_longitude,
+                            float(drone_lat),
+                            float(drone_lon)
+                        )
+
+                        if (
+                            distance <= match_radius_km
+                            and distance < best_distance
+                        ):
+                            best_drone = drone
+                            best_distance = distance
+
+                    except (TypeError, ValueError):
+                        pass
+
+            # ====================================================
+            # 4D. GET DRONE PEOPLE COUNT
+            # ====================================================
+
+            drone_people = 0
+
+
+            if best_drone:
+
+                try:
+
+                    drone_people = int(
+                        best_drone.get(
+                            "people_detected"
+                        )
+                        or 0
+                    )
+
+                except (
+                    TypeError,
+                    ValueError
+                ):
+
+                    drone_people = 0
+
+
+            # ====================================================
+            # 4F. FLOOD SEVERITY — FEATURE 1
+            # ====================================================
+
+            effective_flood_severity = (
+                flood_severity
+            )
+
+
+            # If Feature 1 severity was not supplied,
+            # use severity available in the matched
+            # drone record as a fallback.
+
+            if (
+                effective_flood_severity
+                == 0.0
+                and best_drone
+            ):
+
+                severity_map = {
+
+                    "LOW": 0.25,
+
+                    "MEDIUM": 0.50,
+
+                    "HIGH": 0.75,
+
+                    "CRITICAL": 1.00
+                }
+
+
+                drone_severity = (
+                    best_drone.get(
+                        "severity"
+                    )
+                )
+
+
+                if drone_severity:
+
+                    effective_flood_severity = (
+                        severity_map.get(
+                            str(
+                                drone_severity
+                            ).upper(),
+                            0.0
+                        )
+                    )
+
+
+            # ====================================================
+            # 4G. CALCULATE MULTI-MODAL PRIORITY
+            # ====================================================
+
+            priority_result = (
+                calculate_priority(
+
+                    sos_data=extracted,
+
+                    feature2_people_count=(
+                        drone_people
+                        if best_drone
+                        else None
+                    ),
+
+                    flood_severity=(
+                        effective_flood_severity
+                    )
+                )
+            )
+
+
+            # ====================================================
+            # 4H. BUILD COMPLETE EMERGENCY RECORD
+            # ====================================================
+
+            emergency = {
+
+                "sos_id": sos.get(
+                    "id"
+                ),
+
+                "created_at": sos.get(
+                    "created_at"
+                ),
+
+                "status": sos.get(
+                    "status"
+                ),
+
+
+                # -----------------------------------------------
+                # LOCATION
+                # -----------------------------------------------
+
+                "location": sos_location,
+
+                "latitude": sos_latitude,
+
+                "longitude": sos_longitude,
+
+
+                # -----------------------------------------------
+                # FEATURE 3 — SOS
+                # -----------------------------------------------
+
+                "sos_data": extracted,
+
+                "original_message": sos.get(
+                    "original_message"
+                ),
+
+
+                # -----------------------------------------------
+                # FEATURE 2 — DRONE
+                # -----------------------------------------------
+
+                "drone": {
+
+                    "available": (
+                        best_drone
+                        is not None
+                    ),
+
+                    "people_detected": (
+                        drone_people
+                    ),
+
+                    "location": (
+                        best_drone.get(
+                            "location"
+                        )
+                        if best_drone
+                        else None
+                    ),
+
+                    "latitude": (
+                        best_drone.get(
+                            "latitude"
+                        )
+                        if best_drone
+                        else None
+                    ),
+
+                    "longitude": (
+                        best_drone.get(
+                            "longitude"
+                        )
+                        if best_drone
+                        else None
+                    ),
+
+                    "distance_from_sos_km": (
+
+                        round(
+                            best_distance,
+                            2
+                        )
+
+                        if isinstance(
+                            best_distance,
+                            (
+                                int,
+                                float
+                            )
+                        )
+
+                        and
+                        best_distance
+                        != float("inf")
+
+                        else None
+                    ),
+
+                    "image_path": (
+
+                        best_drone.get(
+                            "image_path"
+                        )
+
+                        if best_drone
+                        else None
+                    ),
+
+                    "confidence": (
+
+                        best_drone.get(
+                            "confidence"
+                        )
+
+                        if best_drone
+                        else None
+                    ),
+
+                    "model_name": (
+
+                        best_drone.get(
+                            "model_name"
+                        )
+
+                        if best_drone
+                        else None
+                    ),
+
+                    "analysis_status": (
+
+                        best_drone.get(
+                            "analysis_status"
+                        )
+
+                        if best_drone
+                        else None
+                    )
+                },
+
+
+                # -----------------------------------------------
+                # FEATURE 1 — FLOOD
+                # -----------------------------------------------
+
+                "flood": {
+
+                    "severity": (
+                        effective_flood_severity
+                    ),
+
+                    "available": (
+                        effective_flood_severity
+                        > 0
+                    )
+                },
+
+
+                # -----------------------------------------------
+                # FINAL PRIORITY
+                # -----------------------------------------------
+
+                "priority": priority_result
+            }
+
+
+            ranked.append(
+                emergency
+            )
+
+
+        # ========================================================
+        # 5. SORT BY ACTUAL PRIORITY SCORE
+        # ========================================================
+        #
+        # IMPORTANT:
+        #
+        # calculate_priority() returns:
+        #
+        #     "priority_score"
+        #
+        # NOT:
+        #
+        #     "score"
+        #
+        # So we explicitly sort using priority_score.
+        #
+
+        ranked.sort(
+
+            key=lambda item: (
+
+                item
+                .get(
+                    "priority",
+                    {}
+                )
+                .get(
+                    "priority_score",
+                    0
+                )
+
+            ),
+
+            reverse=True
+        )
+
+
+        # ========================================================
+        # 6. ASSIGN RANK
+        # ========================================================
+
+        for index, item in enumerate(
+            ranked,
+            start=1
+        ):
+
+            item["rank"] = index
+
+
+        # ========================================================
+        # 7. RETURN FINAL FEATURE 4 RESPONSE
+        # ========================================================
+
+        return {
+
+            "success": True,
+
+            "count": len(
+                ranked
+            ),
+
+            "match_radius_km": (
+                match_radius_km
+            ),
+
+            "flood_severity_used": (
+                flood_severity
+            ),
+
+            "emergencies": ranked
+        }
+
+
+    except Exception as e:
+
+        print(
+            "🔥 PRIORITY DASHBOARD ERROR:",
+            repr(e)
+        )
+
+        raise HTTPException(
+
+            status_code=500,
+
+            detail=(
+                "Priority dashboard failed: "
+                f"{str(e)}"
+            )
         )
 
 # ============================================================
@@ -2703,7 +3884,13 @@ async def get_shelters_live():
 @app.get("/api/relief-status")
 async def get_relief_status():
     try:
-        assessments = supabase.table("relief_assessments").select("*").execute().data
+        assessments = (
+            supabase.table("relief_status_view")
+            .select("*")
+            .order("shelter_id")
+            .execute()
+            .data
+        )
         budgets = supabase.table("budgets").select("*").execute().data
         expenses = supabase.table("expenses").select("*").execute().data
         total_allocated = sum(float(b["total_allocated"]) for b in budgets)

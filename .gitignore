@@ -23,3 +23,10 @@ __pycache__/
 
 # Swytchcode local files
 .swytchcode/workspace.json
+
+# Local development/editor files
+.vscode/
+.swytchcode/
+
+# Test/local files
+gemini_test.json
