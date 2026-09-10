@@ -12,7 +12,7 @@ FloodGuard combines AI-powered SOS extraction, flood-risk prediction, drone dete
 
 ## Why FloodGuard Is Different
 
-FloodGuard connects the complete response chain. A natural-language SOS becomes validated emergency data, a mapped incident, a priority score, and an input to rescue allocation. That record can also be enriched with drone observations and flood severity instead of remaining an isolated text message.
+FloodGuard connects the complete emergency-response chain. A natural-language SOS becomes structured emergency data, a mapped incident, and a priority score. That information is then enriched with drone observations and flood severity, allowing the system to combine citizen, aerial, and environmental intelligence to determine where help should be sent first.
 
 ## Key Features
 
@@ -20,7 +20,7 @@ FloodGuard connects the complete response chain. A natural-language SOS becomes 
 - **Flood Risk Analysis:** Predicts risk from water level, rainfall, soil moisture, elevation, and rate of change.
 - **SOS Intelligence:** Extracts location, people, vulnerabilities, situation, needs, and requested resources.
 - **Drone Intelligence:** Detects people in uploaded flood imagery and stores annotated results.
-- **Multi-Modal Priority:** Combines SOS, drone, and flood information to rank incidents.
+- **Multi-Modal Priority:** Combines citizen SOS intelligence, drone detections, flood-risk severity, vulnerabilities, needs, and location information into a transparent priority score, helping responders determine which incident should receive assistance first.
 - **Safe Route Planning:** Finds available shelters and compares driving routes, distance, and ETA.
 - **Operations:** Supports rescue-resource allocation, shelter allocation, and relief planning.
 
@@ -33,7 +33,7 @@ UNDERSTAND  FloodGuard predicts flood risk and Lyzr converts each SOS message in
 
 OBSERVE     Drone intelligence detects people and adds field evidence from uploaded flood imagery
 
-DECIDE      SOS, flood, drone, vulnerability, and location data are combined to rank incidents and identify the best response
+DECIDE      SOS, flood, drone, vulnerability, needs, and location data are combined into a transparent priority score to determine which incident should receive help first
 
 GUIDE       Safe-route planning compares available shelters, driving distance, and ETA for evacuation decisions
 
@@ -48,14 +48,14 @@ ACT         Rescue resources, shelter capacity, and relief operations are alloca
 - **Data:** Supabase and local SOS JSON persistence
 - **Maps:** Google Maps Platform, OSRM, and OpenStreetMap tiles
 - **Optimization:** OR-Tools
-- **Lyzr AI:** Powers SOS extraction in `backend/services/sos_extractor.py`; validated results feed geocoding, priority calculation, incident persistence, and rescue allocation.
+- **Lyzr AI:** Powers SOS extraction in `backend/services/sos_extractor.py`; provides the agent workflow and allows different underlying AI models to be evaluated and selected for the SOS extraction task. Structured, validated results feed geocoding, priority calculation, incident persistence, and rescue allocation.
 - **Google Gemini:** The safe-route workflow calls Gemini's `generateContent` API to recommend a shelter using route distance and ETA data, with deterministic scoring as a fallback.
 - **Render:** Used to deploy and host the FloodGuard frontend and backend services.
 - **Swytchcode:** Project integration configuration is represented by `SWYTCHCODE_PATH` in `backend/main.py` and exposed through `/health`; the repository also includes the Swytchcode integration contract in `.github/copilot-instructions.md`.
 
 ## Lyzr AI Integration
 
-FloodGuard uses **Lyzr AI** as the intelligence layer for transforming unstructured emergency messages into actionable rescue data.
+FloodGuard uses **Lyzr AI** as the agent and intelligence layer for transforming unstructured emergency messages into structured, actionable rescue data. Lyzr allows us to work with different underlying AI models and select the model that performs best for our SOS extraction workflow.
 
 When a user submits an SOS message, the Lyzr agent analyzes it and extracts:
 
@@ -67,7 +67,7 @@ When a user submits an SOS message, the Lyzr agent analyzes it and extracts:
 - Medical-transfer requirements
 - Contact information
 
-The extracted response is validated through a strict structured schema before entering the rescue workflow. This prevents the rest of the system from depending on unreliable free-form AI output.
+The extracted response is validated through a strict structured schema before entering the rescue workflow, so downstream components receive consistent, machine-readable data instead of relying on free-form AI output.
 
 ### Lyzr-Powered Emergency Workflow
 
@@ -76,6 +76,9 @@ User SOS message
 	|
 	v
 Lyzr AI agent
+	|
+	v
+Selected underlying LLM
 	|
 	v
 Structured emergency extraction
