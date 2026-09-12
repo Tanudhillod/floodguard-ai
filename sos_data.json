@@ -747,39 +747,433 @@
     }
   },
   {
-    "id": 12,
-    "created_at": "2026-09-04T14:52:41Z",
-    "status": "Pending",
-    "original_message": "2 people need help. Needs: MEDICAL. Location: not provided. Situation: URGENT! We are trapped in Dibrugarh, Assam due to severe flooding. There are 12 people who need immediate rescue, including 3 children, 2 elderly people, 1 pregnant woman, and 2 injured people. Flood water has entered the building and is rising rapidly. We have no safe way to evacuate. We urgently need rescue, drinking water, food, shelter, and medical assistance. Please send a rescue team immediately.",
+    "id": "INC12",
+    "created_at": "2026-09-05T05:17:13.539868+00:00",
+    "status": "PENDING",
+    "original_message": "26 people need help. Needs: MEDICAL, RESCUE. Location: not provided. Situation: “Our house in Nalbari, Assam has been completely flooded and we have already moved out. There are 6 people in our family, including two children. We need a safe shelter for tonight and basic food and drinking water. Contact: 9345678901.”",
     "extracted_data": {
       "source_type": "GROUP_SOS",
       "location": {
-        "text": "Dibrugarh, Assam",
-        "latitude": 27.4705449,
-        "longitude": 94.9124625,
+        "text": "Nalbari, Assam",
+        "latitude": 26.4446185,
+        "longitude": 91.4410527,
         "geocoded": true,
-        "geocoded_address": "Dibrugarh, Assam, India",
-        "coordinate_source": "demo_seed"
+        "geocoded_address": "Nalbari, Assam, India",
+        "coordinate_source": "places"
       },
       "people": {
-        "total": "12",
-        "children": "3",
-        "elderly": "2",
+        "total": 26,
+        "children": "2",
+        "elderly": null,
+        "pregnant": null,
+        "injured": null,
+        "missing": null,
+        "deceased": null,
+        "mobility_impaired": null
+      },
+      "situation": "A house in Nalbari, Assam has been completely flooded and the people have already moved out. They need safe shelter for tonight, basic food, and drinking water.",
+      "request": {
+        "type": "SHELTER",
+        "resources": [
+          "SHELTER",
+          "FOOD",
+          "WATER"
+        ]
+      },
+      "needs": {
+        "food": true,
+        "water": true,
+        "medicine": false,
+        "shelter": true,
+        "rescue": true,
+        "medical_transfer": false
+      },
+      "contact_info": [
+        "9345678901"
+      ],
+      "original_message": "26 people need help. Needs: MEDICAL, RESCUE. Location: not provided. Situation: “Our house in Nalbari, Assam has been completely flooded and we have already moved out. There are 6 people in our family, including two children. We need a safe shelter for tonight and basic food and drinking water. Contact: 9345678901.”",
+      "priority": {
+        "priority": "LOW",
+        "priority_score": 43,
+        "score_breakdown": {
+          "people_score": 18,
+          "vulnerability_score": 4,
+          "needs_score": 14,
+          "request_score": 2,
+          "flood_score": 0,
+          "location_score": 5
+        },
+        "inputs": {
+          "sos_people": 26,
+          "feature2_people": null,
+          "effective_people": 26,
+          "flood_severity": 0.0
+        },
+        "recommended_actions": [
+          "RESCUE",
+          "WATER_SUPPLY",
+          "FOOD_SUPPLY",
+          "SHELTER"
+        ],
+        "incident_id": "INC13",
+        "people": 26,
+        "latitude": 26.444618499999997,
+        "longitude": 91.4410527,
+        "status": "WAITING_FOR_RESCUE",
+        "priority_level": "MEDIUM"
+      }
+    },
+    "assignments": []
+  },
+  {
+    "id": "INC13",
+    "created_at": "2026-09-05T05:24:39.463006+00:00",
+    "status": "PENDING",
+    "original_message": "31 people need help. Needs: MEDICAL, RESCUE, FOOD, SHELTER, WATER. Location: not provided. Situation: “Our house in Nalbari, Assam has been completely flooded and we have already moved out. There are 6 people in our family, including two children. We need a safe shelter for tonight and basic food and drinking water. Contact: 9345678901.”",
+    "extracted_data": {
+      "source_type": "GROUP_SOS",
+      "location": {
+        "text": "Nalbari, Assam",
+        "latitude": 26.4446185,
+        "longitude": 91.4410527
+      },
+      "people": {
+        "total": 26,
+        "children": "2",
+        "elderly": null,
+        "pregnant": null,
+        "injured": null,
+        "missing": null,
+        "deceased": null,
+        "mobility_impaired": null
+      },
+      "situation": "31 people need help. Their house in Nalbari, Assam has been completely flooded and they have already moved out. They need safe shelter for tonight, basic food, and drinking water.",
+      "request": {
+        "type": "SHELTER",
+        "resources": [
+          "MEDICAL",
+          "RESCUE",
+          "FOOD",
+          "SHELTER",
+          "WATER"
+        ]
+      },
+      "needs": {
+        "food": true,
+        "water": true,
+        "medicine": true,
+        "shelter": true,
+        "rescue": true,
+        "medical_transfer": false
+      },
+      "contact_info": [
+        "9345678901"
+      ],
+      "original_message": "31 people need help. Needs: MEDICAL, RESCUE, FOOD, SHELTER, WATER. Location: not provided. Situation: “Our house in Nalbari, Assam has been completely flooded and we have already moved out. There are 6 people in our family, including two children. We need a safe shelter for tonight and basic food and drinking water. Contact: 9345678901.”",
+      "priority": {
+        "priority": "LOW",
+        "priority_score": 43,
+        "score_breakdown": {
+          "people_score": 18,
+          "vulnerability_score": 4,
+          "needs_score": 17,
+          "request_score": 2,
+          "flood_score": 0,
+          "location_score": 0
+        },
+        "inputs": {
+          "sos_people": 31,
+          "feature2_people": null,
+          "effective_people": 31,
+          "flood_severity": 0.0
+        },
+        "recommended_actions": [
+          "RESCUE",
+          "WATER_SUPPLY",
+          "FOOD_SUPPLY",
+          "MEDICAL_SUPPLIES",
+          "SHELTER"
+        ],
+        "incident_id": "INC14",
+        "people": 31,
+        "latitude": null,
+        "longitude": null,
+        "status": "WAITING_FOR_RESCUE",
+        "priority_level": "MEDIUM"
+      }
+    },
+    "assignments": []
+  },
+  {
+    "id": "INC14",
+    "created_at": "2026-09-05T05:32:24.245028+00:00",
+    "status": "PENDING",
+    "original_message": "32 people need help. Needs: RESCUE, MEDICAL, WATER, SHELTER, FOOD. Location: not provided. Situation: “URGENT SOS! Around 45 people are trapped inside a school building in Morigaon, Assam. Flood water has entered the ground floor and is rising rapidly. There are 8 children, 6 elderly people, 2 injured people and one pregnant woman among us. We have very little drinking water and no food left. The elderly and injured cannot safely evacuate on their own. We urgently need rescue by boat, medical assistance, drinking water and food. Please send immediate help. Contact: 9876543210.”",
+    "extracted_data": {
+      "source_type": "GROUP_SOS",
+      "location": {
+        "text": null,
+        "latitude": null,
+        "longitude": null,
+        "geocoded": true,
+        "geocoded_address": "Morigaon, Assam, India",
+        "coordinate_source": "places"
+      },
+      "people": {
+        "total": 31,
+        "children": "8",
+        "elderly": "6",
         "pregnant": "1",
         "injured": "2",
         "missing": null,
         "deceased": null,
         "mobility_impaired": null
       },
-      "situation": "12 people are trapped in Dibrugarh, Assam due to severe flooding; floodwater has entered the building and is rising rapidly.",
+      "situation": "Around 45 people are trapped inside a school building in Morigaon, Assam, with flood water entering the ground floor and rising rapidly. They have very little drinking water and no food left, and the elderly and injured cannot evacuate safely on their own.",
       "request": {
-        "type": "MEDICAL",
+        "type": "RESCUE",
         "resources": [
-          "RESCUE",
+          "BOAT",
+          "MEDICAL ASSISTANCE",
           "DRINKING WATER",
-          "FOOD",
-          "SHELTER",
-          "MEDICAL ASSISTANCE"
+          "FOOD"
+        ]
+      },
+      "needs": {
+        "food": true,
+        "water": true,
+        "medicine": true,
+        "shelter": false,
+        "rescue": true,
+        "medical_transfer": false
+      },
+      "contact_info": [
+        "9876543210"
+      ],
+      "original_message": "32 people need help. Needs: RESCUE, MEDICAL, WATER, SHELTER, FOOD. Location: not provided. Situation: “URGENT SOS! Around 45 people are trapped inside a school building in Morigaon, Assam. Flood water has entered the ground floor and is rising rapidly. There are 8 children, 6 elderly people, 2 injured people and one pregnant woman among us. We have very little drinking water and no food left. The elderly and injured cannot safely evacuate on their own. We urgently need rescue by boat, medical assistance, drinking water and food. Please send immediate help. Contact: 9876543210.”",
+      "priority": {
+        "priority": "MEDIUM",
+        "priority_score": 41,
+        "score_breakdown": {
+          "people_score": 18,
+          "vulnerability_score": 20,
+          "needs_score": 15,
+          "request_score": 6,
+          "flood_score": 0,
+          "location_score": 5
+        },
+        "inputs": {
+          "sos_people": 45,
+          "feature2_people": null,
+          "effective_people": 45,
+          "flood_severity": 0.0
+        },
+        "recommended_actions": [
+          "RESCUE",
+          "WATER_SUPPLY",
+          "FOOD_SUPPLY",
+          "MEDICAL_SUPPLIES"
+        ],
+        "incident_id": "INC15",
+        "people": 45,
+        "latitude": 26.2514394,
+        "longitude": 92.342311,
+        "status": "WAITING_FOR_RESCUE",
+        "priority_level": "MEDIUM"
+      }
+    },
+    "assignments": []
+  },
+  {
+    "id": "INC15",
+    "created_at": "2026-09-05T05:38:46.155484+00:00",
+    "status": "PENDING",
+    "original_message": "27 people need help. Needs: FOOD, SHELTER, MEDICAL, RESCUE, WATER. Location: not provided. Situation: “URGENT SOS! Around 45 people are trapped inside a school building in Morigaon, Assam. Flood water has entered the ground floor and is rising rapidly. There are 8 children, 6 elderly people, 2 injured people and one pregnant woman among us. We have very little drinking water and no food left. The elderly and injured cannot safely evacuate on their own. We urgently need rescue by boat, medical assistance, drinking water and food. Please send immediate help. Contact: 9876543210.”",
+    "extracted_data": {
+      "source_type": "GROUP_SOS",
+      "location": {
+        "text": "Morigaon, Assam",
+        "latitude": 26.2514394,
+        "longitude": 92.342311,
+        "geocoded": true,
+        "geocoded_address": "Morigaon, Assam, India",
+        "coordinate_source": "places"
+      },
+      "people": {
+        "total": 45,
+        "children": "8",
+        "elderly": "6",
+        "pregnant": "1",
+        "injured": "2",
+        "missing": null,
+        "deceased": null,
+        "mobility_impaired": null
+      },
+      "situation": "Around 45 people are trapped inside a school building in Morigaon, Assam, with floodwater entering the ground floor and rising rapidly.",
+      "request": {
+        "type": "RESCUE",
+        "resources": [
+          "BOAT",
+          "MEDICAL ASSISTANCE",
+          "DRINKING WATER",
+          "FOOD"
+        ]
+      },
+      "needs": {
+        "food": true,
+        "water": true,
+        "medicine": true,
+        "shelter": false,
+        "rescue": true,
+        "medical_transfer": false
+      },
+      "contact_info": [
+        "9876543210"
+      ],
+      "original_message": "URGENT SOS! Around 45 people are trapped inside a school building in Morigaon, Assam. Flood water has entered the ground floor and is rising rapidly. There are 8 children, 6 elderly people, 2 injured people and one pregnant woman among us. We have very little drinking water and no food left. The elderly and injured cannot safely evacuate on their own. We urgently need rescue by boat, medical assistance, drinking water and food. Please send immediate help. Contact: 9876543210.",
+      "priority": {
+        "priority": "MEDIUM",
+        "priority_score": 64,
+        "score_breakdown": {
+          "people_score": 18,
+          "vulnerability_score": 20,
+          "needs_score": 15,
+          "request_score": 6,
+          "flood_score": 0,
+          "location_score": 5
+        },
+        "inputs": {
+          "sos_people": 45,
+          "feature2_people": null,
+          "effective_people": 45,
+          "flood_severity": 0.0
+        },
+        "recommended_actions": [
+          "RESCUE",
+          "WATER_SUPPLY",
+          "FOOD_SUPPLY",
+          "MEDICAL_SUPPLIES"
+        ],
+        "incident_id": "INC16",
+        "people": 45,
+        "latitude": 26.2514394,
+        "longitude": 92.342311,
+        "status": "WAITING_FOR_RESCUE",
+        "priority_level": "HIGH"
+      }
+    },
+    "assignments": []
+  },
+  {
+    "id": "INC12",
+    "created_at": "2026-09-05T06:09:28.793831+00:00",
+    "status": "PENDING",
+    "original_message": "35 people need help. Needs: RESCUE, MEDICAL, WATER, SHELTER, FOOD. Location: not provided. Situation: “CRITICAL SOS! Around 35 people are trapped in a community building in Nalbari, Assam. Flood water has entered the building and evacuation is urgently required. There are 6 children, 5 elderly people, 2 injured people and one pregnant woman among us. We have very little drinking water and no food left. The injured people need medical attention. Please arrange immediate boat rescue and take us to a safe relief shelter with enough available capacity. Contact: 9876543210.”",
+    "extracted_data": {
+      "source_type": "GROUP_SOS",
+      "location": {
+        "text": "Nalbari, Assam",
+        "latitude": 26.4446185,
+        "longitude": 91.4410527,
+        "geocoded": true,
+        "geocoded_address": "Nalbari, Assam, India",
+        "coordinate_source": "places"
+      },
+      "people": {
+        "total": 35,
+        "children": "6",
+        "elderly": "5",
+        "pregnant": "1",
+        "injured": "2",
+        "missing": null,
+        "deceased": null,
+        "mobility_impaired": null
+      },
+      "situation": "Around 35 people are trapped in a community building in Nalbari, Assam. Flood water has entered the building and evacuation is urgently required.",
+      "request": {
+        "type": "RESCUE",
+        "resources": [
+          "BOAT",
+          "SHELTER"
+        ]
+      },
+      "needs": {
+        "food": true,
+        "water": true,
+        "medicine": true,
+        "shelter": true,
+        "rescue": true,
+        "medical_transfer": false
+      },
+      "contact_info": [
+        "9876543210"
+      ],
+      "original_message": "CRITICAL SOS! Around 35 people are trapped in a community building in Nalbari, Assam. Flood water has entered the building and evacuation is urgently required. There are 6 children, 5 elderly people, 2 injured people and one pregnant woman among us. We have very little drinking water and no food left. The injured people need medical attention. Please arrange immediate boat rescue and take us to a safe relief shelter with enough available capacity. Contact: 9876543210.",
+      "priority": {
+        "priority": "HIGH",
+        "priority_score": 66,
+        "score_breakdown": {
+          "people_score": 18,
+          "vulnerability_score": 20,
+          "needs_score": 17,
+          "request_score": 6,
+          "flood_score": 0,
+          "location_score": 5
+        },
+        "inputs": {
+          "sos_people": 35,
+          "feature2_people": null,
+          "effective_people": 35,
+          "flood_severity": 0.0
+        },
+        "recommended_actions": [
+          "RESCUE",
+          "WATER_SUPPLY",
+          "FOOD_SUPPLY",
+          "MEDICAL_SUPPLIES",
+          "SHELTER"
+        ],
+        "incident_id": "INC12",
+        "people": 35,
+        "latitude": 26.444618499999997,
+        "longitude": 91.4410527,
+        "status": "WAITING_FOR_RESCUE",
+        "priority_level": "HIGH"
+      }
+    },
+    "assignments": []
+  },
+  {
+    "id": "INC13",
+    "created_at": "2026-09-05T05:17:13.539868+00:00",
+    "status": "PENDING",
+    "original_message": "15 people need help. Needs: RESCUE, SHELTER, MEDICAL. Location: not provided. Situation: URGENT SOS! Around 32 people are trapped in a school building in Nalbari, Assam. Flood water has entered the ground floor and is rising rapidly. There are 7 children, 6 elderly people, 2 injured people and 1 pregnant woman. We have very little drinking water and no food. Please send immediate boat rescue and medical assistance.",
+    "extracted_data": {
+      "source_type": "GROUP_SOS",
+      "location": {
+        "text": "Nalbari, Assam",
+        "latitude": 26.4446185,
+        "longitude": 91.4410527,
+        "geocoded": true,
+        "geocoded_address": "Nalbari, Assam, India",
+        "coordinate_source": "places"
+      },
+      "people": {
+        "total": 32,
+        "children": "7",
+        "elderly": "6",
+        "pregnant": "1",
+        "injured": "2",
+        "missing": null,
+        "deceased": null,
+        "mobility_impaired": null
+      },
+      "situation": "Around 32 people are trapped in a school building in Nalbari, Assam. Flood water has entered the ground floor and is rising rapidly. There are 7 children, 6 elderly people, 2 injured people and 1 pregnant woman. They have very little drinking water and no food.",
+      "request": {
+        "type": "RESCUE",
+        "resources": [
+          "BOAT",
+          "MEDICAL_ASSISTANCE"
         ]
       },
       "needs": {
@@ -791,22 +1185,22 @@
         "medical_transfer": false
       },
       "contact_info": [],
-      "original_message": "2 people need help. Needs: MEDICAL. Location: not provided. Situation: URGENT! We are trapped in Dibrugarh, Assam due to severe flooding. There are 12 people who need immediate rescue, including 3 children, 2 elderly people, 1 pregnant woman, and 2 injured people. Flood water has entered the building and is rising rapidly. We have no safe way to evacuate. We urgently need rescue, drinking water, food, shelter, and medical assistance. Please send a rescue team immediately.",
+      "original_message": "15 people need help. Needs: RESCUE, SHELTER, MEDICAL. Location: not provided. Situation: URGENT SOS! Around 32 people are trapped in a school building in Nalbari, Assam. Flood water has entered the ground floor and is rising rapidly. There are 7 children, 6 elderly people, 2 injured people and 1 pregnant woman. We have very little drinking water and no food. Please send immediate boat rescue and medical assistance.",
       "priority": {
-        "priority": "MEDIUM",
-        "priority_score": 61,
+        "priority": "HIGH",
+        "priority_score": 66,
         "score_breakdown": {
-          "people_score": 15,
+          "people_score": 18,
           "vulnerability_score": 20,
           "needs_score": 17,
-          "request_score": 8,
+          "request_score": 6,
           "flood_score": 0,
-          "location_score": 1
+          "location_score": 5
         },
         "inputs": {
-          "sos_people": 12,
+          "sos_people": 32,
           "feature2_people": null,
-          "effective_people": 12,
+          "effective_people": 32,
           "flood_severity": 0.0
         },
         "recommended_actions": [
@@ -815,8 +1209,780 @@
           "FOOD_SUPPLY",
           "MEDICAL_SUPPLIES",
           "SHELTER"
-        ]
+        ],
+        "incident_id": "INC13",
+        "people": 32,
+        "latitude": 26.444618499999997,
+        "longitude": 91.4410527,
+        "status": "WAITING_FOR_RESCUE",
+        "priority_level": "HIGH"
       }
-    }
+    },
+    "assignments": []
+  },
+  {
+    "id": "INC14",
+    "created_at": "2026-09-05T05:24:39.463006+00:00",
+    "status": "PENDING",
+    "original_message": "6 people need help. Needs: RESCUE, SHELTER. Location: not provided. Situation: Emergency in Morigaon! 14 people are trapped inside a flooded house. Two people are seriously injured and one elderly person is unconscious. Roads are completely flooded and we cannot leave. Please arrange boat rescue and urgent medical evacuation.",
+    "extracted_data": {
+      "source_type": "GROUP_SOS",
+      "location": {
+        "text": "Morigaon",
+        "latitude": 26.2514394,
+        "longitude": 92.342311,
+        "geocoded": true,
+        "geocoded_address": "Morigaon, Assam, India",
+        "coordinate_source": "places"
+      },
+      "people": {
+        "total": 14,
+        "children": null,
+        "elderly": "1",
+        "pregnant": null,
+        "injured": "2",
+        "missing": null,
+        "deceased": null,
+        "mobility_impaired": "1"
+      },
+      "situation": "14 people are trapped inside a flooded house. Two are seriously injured and one elderly person is unconscious. Roads are flooded, and they require boat rescue and medical evacuation.",
+      "request": {
+        "type": "RESCUE",
+        "resources": [
+          "BOAT"
+        ]
+      },
+      "needs": {
+        "food": false,
+        "water": false,
+        "medicine": true,
+        "shelter": true,
+        "rescue": true,
+        "medical_transfer": true
+      },
+      "contact_info": [],
+      "original_message": "6 people need help. Needs: RESCUE, SHELTER. Location: not provided. Situation: Emergency in Morigaon! 14 people are trapped inside a flooded house. Two people are seriously injured and one elderly person is unconscious. Roads are completely flooded and we cannot leave. Please arrange boat rescue and urgent medical evacuation.",
+      "priority": {
+        "priority": "MEDIUM",
+        "priority_score": 62,
+        "score_breakdown": {
+          "people_score": 15,
+          "vulnerability_score": 16,
+          "needs_score": 20,
+          "request_score": 6,
+          "flood_score": 0,
+          "location_score": 5
+        },
+        "inputs": {
+          "sos_people": 14,
+          "feature2_people": null,
+          "effective_people": 14,
+          "flood_severity": 0.0
+        },
+        "recommended_actions": [
+          "MEDICAL_TRANSFER",
+          "RESCUE",
+          "MEDICAL_SUPPLIES",
+          "SHELTER"
+        ],
+        "incident_id": "INC14",
+        "people": 14,
+        "latitude": 26.2514394,
+        "longitude": 92.342311,
+        "status": "WAITING_FOR_RESCUE",
+        "priority_level": "HIGH"
+      }
+    },
+    "assignments": []
+  },
+  {
+    "id": "INC15",
+    "created_at": "2026-09-05T05:32:24.245028+00:00",
+    "status": "PENDING",
+    "original_message": "1 person need help. Needs: RESCUE, SHELTER. Location: not provided. Situation: Emergency in Morigaon! 14 people are trapped inside a flooded house. Two people are seriously injured and one elderly person is unconscious. Roads are completely flooded and we cannot leave. Please arrange boat rescue and urgent medical evacuation.",
+    "extracted_data": {
+      "source_type": "GROUP_SOS",
+      "location": {
+        "text": "Morigaon",
+        "latitude": 26.2514394,
+        "longitude": 92.342311,
+        "geocoded": true,
+        "geocoded_address": "Morigaon, Assam, India",
+        "coordinate_source": "places"
+      },
+      "people": {
+        "total": 14,
+        "children": null,
+        "elderly": "1",
+        "pregnant": null,
+        "injured": "2",
+        "missing": null,
+        "deceased": null,
+        "mobility_impaired": "1"
+      },
+      "situation": "14 people are trapped inside a flooded house in Morigaon. Two people are seriously injured and one elderly person is unconscious. The roads are flooded, and they cannot leave.",
+      "request": {
+        "type": "RESCUE",
+        "resources": [
+          "BOAT"
+        ]
+      },
+      "needs": {
+        "food": false,
+        "water": false,
+        "medicine": true,
+        "shelter": true,
+        "rescue": true,
+        "medical_transfer": true
+      },
+      "contact_info": [],
+      "original_message": "1 person need help. Needs: RESCUE, SHELTER. Location: not provided. Situation: Emergency in Morigaon! 14 people are trapped inside a flooded house. Two people are seriously injured and one elderly person is unconscious. Roads are completely flooded and we cannot leave. Please arrange boat rescue and urgent medical evacuation.",
+      "priority": {
+        "priority": "MEDIUM",
+        "priority_score": 62,
+        "score_breakdown": {
+          "people_score": 15,
+          "vulnerability_score": 16,
+          "needs_score": 20,
+          "request_score": 6,
+          "flood_score": 0,
+          "location_score": 5
+        },
+        "inputs": {
+          "sos_people": 14,
+          "feature2_people": null,
+          "effective_people": 14,
+          "flood_severity": 0.0
+        },
+        "recommended_actions": [
+          "MEDICAL_TRANSFER",
+          "RESCUE",
+          "MEDICAL_SUPPLIES",
+          "SHELTER"
+        ],
+        "incident_id": "INC15",
+        "people": 14,
+        "latitude": 26.2514394,
+        "longitude": 92.342311,
+        "status": "WAITING_FOR_RESCUE",
+        "priority_level": "HIGH"
+      }
+    },
+    "assignments": []
+  },
+  {
+    "id": "INC12",
+    "created_at": "2026-09-05T06:09:28.793831+00:00",
+    "status": "PENDING",
+    "original_message": "5 people need help. Needs: RESCUE, MEDICAL, WATER. Location: not provided. Situation: URGENT SOS! Around 32 people are trapped in a school building in Nalbari, Assam. Flood water has entered the ground floor and is rising rapidly. There are 7 children, 6 elderly people, 2 injured people and 1 pregnant woman. We have very little drinking water and no food. Please send immediate boat rescue and medical assistance.",
+    "extracted_data": {
+      "source_type": "GROUP_SOS",
+      "location": {
+        "text": "Nalbari, Assam",
+        "latitude": 26.4446185,
+        "longitude": 91.4410527,
+        "geocoded": true,
+        "geocoded_address": "Nalbari, Assam, India",
+        "coordinate_source": "places"
+      },
+      "people": {
+        "total": 32,
+        "children": "7",
+        "elderly": "6",
+        "pregnant": "1",
+        "injured": "2",
+        "missing": null,
+        "deceased": null,
+        "mobility_impaired": null
+      },
+      "situation": "Around 32 people are trapped in a school building in Nalbari, Assam, with floodwater entering the ground floor and rising rapidly. There are 7 children, 6 elderly people, 2 injured people, and 1 pregnant woman. There is very little drinking water and no food.",
+      "request": {
+        "type": "RESCUE",
+        "resources": [
+          "BOAT",
+          "MEDICAL ASSISTANCE"
+        ]
+      },
+      "needs": {
+        "food": true,
+        "water": true,
+        "medicine": true,
+        "shelter": false,
+        "rescue": true,
+        "medical_transfer": false
+      },
+      "contact_info": [],
+      "original_message": "5 people need help. Needs: RESCUE, MEDICAL, WATER. Location: not provided. Situation: URGENT SOS! Around 32 people are trapped in a school building in Nalbari, Assam. Flood water has entered the ground floor and is rising rapidly. There are 7 children, 6 elderly people, 2 injured people and 1 pregnant woman. We have very little drinking water and no food. Please send immediate boat rescue and medical assistance.",
+      "priority": {
+        "priority": "MEDIUM",
+        "priority_score": 64,
+        "score_breakdown": {
+          "people_score": 18,
+          "vulnerability_score": 20,
+          "needs_score": 15,
+          "request_score": 6,
+          "flood_score": 0,
+          "location_score": 5
+        },
+        "inputs": {
+          "sos_people": 32,
+          "feature2_people": null,
+          "effective_people": 32,
+          "flood_severity": 0.0
+        },
+        "recommended_actions": [
+          "RESCUE",
+          "WATER_SUPPLY",
+          "FOOD_SUPPLY",
+          "MEDICAL_SUPPLIES"
+        ],
+        "incident_id": "INC12",
+        "people": 32,
+        "latitude": 26.444618499999997,
+        "longitude": 91.4410527,
+        "status": "WAITING_FOR_RESCUE",
+        "priority_level": "HIGH"
+      }
+    },
+    "assignments": []
+  },
+  {
+    "id": "INC13",
+    "created_at": "2026-09-05T05:17:13.539868+00:00",
+    "status": "PENDING",
+    "original_message": "4 people need help. Needs: RESCUE, MEDICAL, FOOD, WATER. Location: not provided. Situation: “CRITICAL SOS! Around 35 people are trapped in a community building in Nalbari, Assam. Flood water has entered the building and evacuation is urgently required. There are 6 children, 5 elderly people, 2 injured people and one pregnant woman among us. We have very little drinking water and no food left. The injured people need medical attention. Please arrange immediate boat rescue and take us to a safe relief shelter with enough available capacity. Contact: 9876543210.”",
+    "extracted_data": {
+      "source_type": "GROUP_SOS",
+      "location": {
+        "text": "Nalbari, Assam",
+        "latitude": 26.4446185,
+        "longitude": 91.4410527,
+        "geocoded": true,
+        "geocoded_address": "Nalbari, Assam, India",
+        "coordinate_source": "places"
+      },
+      "people": {
+        "total": 32,
+        "children": "6",
+        "elderly": "5",
+        "pregnant": "1",
+        "injured": "2",
+        "missing": null,
+        "deceased": null,
+        "mobility_impaired": null
+      },
+      "situation": "Around 35 people are trapped in a community building in Nalbari, Assam after flood water entered the building.",
+      "request": {
+        "type": "RESCUE",
+        "resources": [
+          "BOAT",
+          "SAFE RELIEF SHELTER"
+        ]
+      },
+      "needs": {
+        "food": true,
+        "water": true,
+        "medicine": true,
+        "shelter": true,
+        "rescue": true,
+        "medical_transfer": false
+      },
+      "contact_info": [
+        "9876543210"
+      ],
+      "original_message": "CRITICAL SOS! Around 35 people are trapped in a community building in Nalbari, Assam. Flood water has entered the building and evacuation is urgently required. There are 6 children, 5 elderly people, 2 injured people and one pregnant woman among us. We have very little drinking water and no food left. The injured people need medical attention. Please arrange immediate boat rescue and take us to a safe relief shelter with enough available capacity. Contact: 9876543210.",
+      "priority": {
+        "priority": "HIGH",
+        "priority_score": 64,
+        "score_breakdown": {
+          "people_score": 18,
+          "vulnerability_score": 20,
+          "needs_score": 17,
+          "request_score": 6,
+          "flood_score": 0,
+          "location_score": 5
+        },
+        "inputs": {
+          "sos_people": 35,
+          "feature2_people": null,
+          "effective_people": 35,
+          "flood_severity": 0.0
+        },
+        "recommended_actions": [
+          "RESCUE",
+          "WATER_SUPPLY",
+          "FOOD_SUPPLY",
+          "MEDICAL_SUPPLIES",
+          "SHELTER"
+        ],
+        "incident_id": "INC13",
+        "people": 35,
+        "latitude": 26.444618499999997,
+        "longitude": 91.4410527,
+        "status": "WAITING_FOR_RESCUE",
+        "priority_level": "HIGH"
+      }
+    },
+    "assignments": []
+  },
+  {
+    "id": "INC14",
+    "created_at": "2026-09-05T05:24:39.463006+00:00",
+    "status": "PENDING",
+    "original_message": "1 person need help. Needs: RESCUE, MEDICAL, SHELTER, FOOD. Location: not provided. Situation: “CRITICAL SOS! Around 35 people are trapped in a community building in Nalbari, Assam. Flood water has entered the building and evacuation is urgently required. There are 6 children, 5 elderly people, 2 injured people and one pregnant woman among us. We have very little drinking water and no food left. The injured people need medical attention. Please arrange immediate boat rescue and take us to a safe relief shelter with enough available capacity. Contact: 9876543210.”",
+    "extracted_data": {
+      "source_type": "GROUP_SOS",
+      "location": {
+        "text": null,
+        "latitude": null,
+        "longitude": null,
+        "geocoded": true,
+        "geocoded_address": "Nalbari, Assam, India",
+        "coordinate_source": "places"
+      },
+      "people": {
+        "total": 6,
+        "children": "6",
+        "elderly": "5",
+        "pregnant": "1",
+        "injured": "2",
+        "missing": null,
+        "deceased": null,
+        "mobility_impaired": null
+      },
+      "situation": "Around 35 people are trapped in a community building in Nalbari, Assam after flood water entered the building. They need evacuation, shelter, food, and medical attention for the injured people.",
+      "request": {
+        "type": "RESCUE",
+        "resources": [
+          "BOAT",
+          "SHELTER",
+          "FOOD",
+          "MEDICAL_ATTENTION"
+        ]
+      },
+      "needs": {
+        "food": true,
+        "water": true,
+        "medicine": true,
+        "shelter": true,
+        "rescue": true,
+        "medical_transfer": false
+      },
+      "contact_info": [
+        "9876543210"
+      ],
+      "original_message": "CRITICAL SOS! Around 35 people are trapped in a community building in Nalbari, Assam. Flood water has entered the building and evacuation is urgently required. There are 6 children, 5 elderly people, 2 injured people and one pregnant woman among us. We have very little drinking water and no food left. The injured people need medical attention. Please arrange immediate boat rescue and take us to a safe relief shelter with enough available capacity. Contact: 9876543210.",
+      "priority": {
+        "priority": "HIGH",
+        "priority_score": 28,
+        "score_breakdown": {
+          "people_score": 18,
+          "vulnerability_score": 20,
+          "needs_score": 17,
+          "request_score": 6,
+          "flood_score": 0,
+          "location_score": 5
+        },
+        "inputs": {
+          "sos_people": 35,
+          "feature2_people": null,
+          "effective_people": 35,
+          "flood_severity": 0.0
+        },
+        "recommended_actions": [
+          "RESCUE",
+          "WATER_SUPPLY",
+          "FOOD_SUPPLY",
+          "MEDICAL_SUPPLIES",
+          "SHELTER"
+        ],
+        "incident_id": "INC14",
+        "people": 35,
+        "latitude": 26.444618499999997,
+        "longitude": 91.4410527,
+        "status": "WAITING_FOR_RESCUE",
+        "priority_level": "LOW"
+      }
+    },
+    "assignments": []
+  },
+  {
+    "id": "INC12",
+    "created_at": "2026-09-05T06:09:28.793831+00:00",
+    "status": "PENDING",
+    "original_message": "URGENT SOS! Around 32 people are trapped in a school building in Nalbari, Assam. Flood water has entered the ground floor and is rising rapidly. There are 7 children, 6 elderly people, 2 injured people and 1 pregnant woman. We have very little drinking water and no food. Please send immediate boat rescue and medical assistance.",
+    "extracted_data": {
+      "source_type": "GROUP_SOS",
+      "location": {
+        "text": "Nalbari, Assam",
+        "latitude": 26.4446185,
+        "longitude": 91.4410527,
+        "geocoded": true,
+        "geocoded_address": "Nalbari, Assam, India",
+        "coordinate_source": "places"
+      },
+      "people": {
+        "total": 32,
+        "children": "7",
+        "elderly": "6",
+        "pregnant": "1",
+        "injured": "2",
+        "missing": null,
+        "deceased": null,
+        "mobility_impaired": null
+      },
+      "situation": "Around 32 people are trapped in a school building in Nalbari, Assam. Flood water has entered the ground floor and is rising rapidly.",
+      "request": {
+        "type": "MEDICAL",
+        "resources": [
+          "BOAT",
+          "MEDICAL ASSISTANCE"
+        ]
+      },
+      "needs": {
+        "food": true,
+        "water": true,
+        "medicine": true,
+        "shelter": false,
+        "rescue": true,
+        "medical_transfer": false
+      },
+      "contact_info": [],
+      "original_message": "URGENT SOS! Around 32 people are trapped in a school building in Nalbari, Assam. Flood water has entered the ground floor and is rising rapidly. There are 7 children, 6 elderly people, 2 injured people and 1 pregnant woman. We have very little drinking water and no food. Please send immediate boat rescue and medical assistance.",
+      "priority": {
+        "priority": "HIGH",
+        "priority_score": 66,
+        "score_breakdown": {
+          "people_score": 18,
+          "vulnerability_score": 20,
+          "needs_score": 15,
+          "request_score": 8,
+          "flood_score": 0,
+          "location_score": 5
+        },
+        "inputs": {
+          "sos_people": 32,
+          "feature2_people": null,
+          "effective_people": 32,
+          "flood_severity": 0.0
+        },
+        "recommended_actions": [
+          "RESCUE",
+          "WATER_SUPPLY",
+          "FOOD_SUPPLY",
+          "MEDICAL_SUPPLIES"
+        ],
+        "incident_id": "INC12",
+        "people": 32,
+        "latitude": 26.444618499999997,
+        "longitude": 91.4410527,
+        "status": "WAITING_FOR_RESCUE",
+        "priority_level": "HIGH"
+      }
+    },
+    "assignments": []
+  },
+  {
+    "id": "INC12",
+    "created_at": "2026-09-05T06:09:28.793831+00:00",
+    "status": "PENDING",
+    "original_message": "1 person need help. Needs: MEDICAL, SHELTER. Location: not provided. Situation: I am trapped inside my house in Kuttanad. Water has entered the ground floor and I cannot get outside. I need immediate rescue. Please send a boat. Contact me at 9876543210.",
+    "extracted_data": {
+      "source_type": "INDIVIDUAL_SOS",
+      "location": {
+        "text": "Kuttanad",
+        "latitude": 9.3527659,
+        "longitude": 76.4042404,
+        "geocoded": true,
+        "geocoded_address": "Kuttanad, Kuttanad Taluk, Kerala",
+        "coordinate_source": "places"
+      },
+      "people": {
+        "total": 1,
+        "children": null,
+        "elderly": null,
+        "pregnant": null,
+        "injured": null,
+        "missing": null,
+        "deceased": null,
+        "mobility_impaired": null
+      },
+      "situation": "1 person is trapped inside a house in Kuttanad with water entered on the ground floor and cannot get outside.",
+      "request": {
+        "type": "RESCUE",
+        "resources": [
+          "BOAT"
+        ]
+      },
+      "needs": {
+        "food": false,
+        "water": false,
+        "medicine": false,
+        "shelter": true,
+        "rescue": true,
+        "medical_transfer": false
+      },
+      "contact_info": [
+        "9876543210"
+      ],
+      "original_message": "1 person need help. Needs: MEDICAL, SHELTER. Location: not provided. Situation: I am trapped inside my house in Kuttanad. Water has entered the ground floor and I cannot get outside. I need immediate rescue. Please send a boat. Contact me at 9876543210.",
+      "priority": {
+        "priority": "LOW",
+        "priority_score": 25,
+        "score_breakdown": {
+          "people_score": 5,
+          "vulnerability_score": 0,
+          "needs_score": 9,
+          "request_score": 6,
+          "flood_score": 0,
+          "location_score": 5
+        },
+        "inputs": {
+          "sos_people": 1,
+          "feature2_people": null,
+          "effective_people": 1,
+          "flood_severity": 0.0
+        },
+        "recommended_actions": [
+          "RESCUE",
+          "SHELTER"
+        ],
+        "incident_id": "INC12",
+        "people": 1,
+        "latitude": 9.3527659,
+        "longitude": 76.40424039999999,
+        "status": "WAITING_FOR_RESCUE",
+        "priority_level": "LOW"
+      }
+    },
+    "assignments": []
+  },
+  {
+    "id": "INC13",
+    "created_at": "2026-09-05T05:17:13.539868+00:00",
+    "status": "PENDING",
+    "original_message": "1 person need help. Needs: RESCUE, MEDICAL, SHELTER. Location: not provided. Situation: There are around 25 people stranded in our school near Maramon, including 5 children and 3 elderly people. The water level is rising and we cannot leave the building. We need immediate evacuation along with food and drinking water. Contact: 9123456780.",
+    "extracted_data": {
+      "source_type": "GROUP_SOS",
+      "location": {
+        "text": "Maramon",
+        "latitude": 9.3395558,
+        "longitude": 76.6961305,
+        "geocoded": true,
+        "geocoded_address": "Maramon, Kerala, India",
+        "coordinate_source": "places"
+      },
+      "people": {
+        "total": 25,
+        "children": "5",
+        "elderly": "3",
+        "pregnant": null,
+        "injured": null,
+        "missing": null,
+        "deceased": null,
+        "mobility_impaired": null
+      },
+      "situation": "Around 25 people are stranded in a school near Maramon. The water level is rising, they cannot leave the building, and they need immediate evacuation, food, and drinking water.",
+      "request": {
+        "type": "RESCUE",
+        "resources": [
+          "EVACUATION",
+          "FOOD",
+          "DRINKING WATER"
+        ]
+      },
+      "needs": {
+        "food": true,
+        "water": true,
+        "medicine": true,
+        "shelter": true,
+        "rescue": true,
+        "medical_transfer": false
+      },
+      "contact_info": [
+        "9123456780"
+      ],
+      "original_message": "1 person need help. Needs: RESCUE, MEDICAL, SHELTER. Location: not provided. Situation: There are around 25 people stranded in our school near Maramon, including 5 children and 3 elderly people. The water level is rising and we cannot leave the building. We need immediate evacuation along with food and drinking water. Contact: 9123456780.",
+      "priority": {
+        "priority": "MEDIUM",
+        "priority_score": 54,
+        "score_breakdown": {
+          "people_score": 18,
+          "vulnerability_score": 8,
+          "needs_score": 17,
+          "request_score": 6,
+          "flood_score": 0,
+          "location_score": 5
+        },
+        "inputs": {
+          "sos_people": 25,
+          "feature2_people": null,
+          "effective_people": 25,
+          "flood_severity": 0.0
+        },
+        "recommended_actions": [
+          "RESCUE",
+          "WATER_SUPPLY",
+          "FOOD_SUPPLY",
+          "MEDICAL_SUPPLIES",
+          "SHELTER"
+        ],
+        "incident_id": "INC13",
+        "people": 25,
+        "latitude": 9.3395558,
+        "longitude": 76.6961305,
+        "status": "WAITING_FOR_RESCUE",
+        "priority_level": "MEDIUM"
+      }
+    },
+    "assignments": []
+  },
+  {
+    "id": "INC14",
+    "created_at": "2026-09-05T05:24:39.463006+00:00",
+    "status": "PENDING",
+    "original_message": "1 person need help. Needs: SHELTER, MEDICAL. Location: not provided. Situation: I am trapped inside my house in Kuttanad. Water has entered the ground floor and I cannot get outside. I need immediate rescue. Please send a boat. Contact me at 9876543210.",
+    "extracted_data": {
+      "source_type": "INDIVIDUAL_SOS",
+      "location": {
+        "text": null,
+        "latitude": null,
+        "longitude": null
+      },
+      "people": {
+        "total": "1",
+        "children": null,
+        "elderly": null,
+        "pregnant": null,
+        "injured": null,
+        "missing": null,
+        "deceased": null,
+        "mobility_impaired": null
+      },
+      "situation": "1 person is trapped inside a house in Kuttanad after water entered the ground floor and cannot get outside.",
+      "request": {
+        "type": "RESCUE",
+        "resources": [
+          "BOAT"
+        ]
+      },
+      "needs": {
+        "food": false,
+        "water": false,
+        "medicine": false,
+        "shelter": true,
+        "rescue": true,
+        "medical_transfer": false
+      },
+      "contact_info": [
+        "9876543210"
+      ],
+      "original_message": "1 person need help. Needs: SHELTER, MEDICAL. Location: not provided. Situation: I am trapped inside my house in Kuttanad. Water has entered the ground floor and I cannot get outside. I need immediate rescue. Please send a boat. Contact me at 9876543210.",
+      "priority": {
+        "priority": "LOW",
+        "priority_score": 20,
+        "score_breakdown": {
+          "people_score": 5,
+          "vulnerability_score": 0,
+          "needs_score": 9,
+          "request_score": 6,
+          "flood_score": 0,
+          "location_score": 0
+        },
+        "inputs": {
+          "sos_people": 1,
+          "feature2_people": null,
+          "effective_people": 1,
+          "flood_severity": 0.0
+        },
+        "recommended_actions": [
+          "RESCUE",
+          "SHELTER"
+        ],
+        "incident_id": "INC14",
+        "people": 1,
+        "latitude": null,
+        "longitude": null,
+        "status": "WAITING_FOR_RESCUE"
+      }
+    },
+    "assignments": []
+  },
+  {
+    "id": "INC15",
+    "created_at": "2026-09-05T05:32:24.245028+00:00",
+    "status": "PENDING",
+    "original_message": "1 person need help. Needs: MEDICAL, SHELTER. Location: not provided. Situation: There are around 25 people stranded in our school near Maramon, including 5 children and 3 elderly people. The water level is rising and we cannot leave the building. We need immediate evacuation along with food and drinking water. Contact: 9123456780.",
+    "extracted_data": {
+      "source_type": "GROUP_SOS",
+      "location": {
+        "text": "school near Maramon",
+        "latitude": 9.3330478,
+        "longitude": 76.70580129999999,
+        "geocoded": true,
+        "geocoded_address": "Kozhenchery, p, 8PM4+687, Kozhencherry Road, Kozhencherry, Kerala 689641, India",
+        "coordinate_source": "places"
+      },
+      "people": {
+        "total": "25",
+        "children": "5",
+        "elderly": "3",
+        "pregnant": null,
+        "injured": null,
+        "missing": null,
+        "deceased": null,
+        "mobility_impaired": null
+      },
+      "situation": "Around 25 people are stranded in a school near Maramon. The water level is rising and they cannot leave the building.",
+      "request": {
+        "type": "RESCUE",
+        "resources": [
+          "EVACUATION",
+          "FOOD",
+          "WATER"
+        ]
+      },
+      "needs": {
+        "food": true,
+        "water": true,
+        "medicine": false,
+        "shelter": false,
+        "rescue": true,
+        "medical_transfer": false
+      },
+      "contact_info": [
+        "9123456780"
+      ],
+      "original_message": "1 person need help. Needs: MEDICAL, SHELTER. Location: not provided. Situation: There are around 25 people stranded in our school near Maramon, including 5 children and 3 elderly people. The water level is rising and we cannot leave the building. We need immediate evacuation along with food and drinking water. Contact: 9123456780.",
+      "priority": {
+        "priority": "MEDIUM",
+        "priority_score": 49,
+        "score_breakdown": {
+          "people_score": 18,
+          "vulnerability_score": 8,
+          "needs_score": 12,
+          "request_score": 6,
+          "flood_score": 0,
+          "location_score": 5
+        },
+        "inputs": {
+          "sos_people": 25,
+          "feature2_people": null,
+          "effective_people": 25,
+          "flood_severity": 0.0
+        },
+        "recommended_actions": [
+          "RESCUE",
+          "WATER_SUPPLY",
+          "FOOD_SUPPLY"
+        ],
+        "incident_id": "INC15",
+        "people": 25,
+        "latitude": 9.3330478,
+        "longitude": 76.70580129999999,
+        "status": "WAITING_FOR_RESCUE"
+      }
+    },
+    "assignments": []
   }
 ]

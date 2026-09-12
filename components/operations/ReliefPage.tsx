@@ -14,7 +14,7 @@ interface ReliefAssessment {
   [key: string]: any
 }
 
-const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
+const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
 
 export default function ReliefPage() {
   const [assessments, setAssessments] = useState<ReliefAssessment[]>([])
